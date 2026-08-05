@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JTG-Ventus-3-Training-Log</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; }
+    .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 0.95rem; }
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #334155;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .metric {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .metric .label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .metric .value {
+      font-size: 1.55rem;
+      font-weight: 700;
+      margin-top: 4px;
+      color: #38bdf8;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin: 4px 6px 4px 0;
+      transition: background 0.15s;
+    }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    button.danger { background: #ef4444; }
+    button.danger:hover { background: #dc2626; }
+    button.success { background: #22c55e; }
+    button.success:hover { background: #16a34a; }
+    button.export { background: #f97316; }
+    button.export:hover { background: #ea580c; }
+    button.hr { background: #a855f7; }
+    button.hr:hover { background: #9333ea; }
+    #log {
+      background: #020617;
+      border-radius: 8px;
+      padding: 12px;
+      height: 260px;
+      overflow-y: auto;
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      border: 1px solid #1e293b;
+    }
+    .log-tx { color: #fbbf24; }
+    .log-rx { color: #4ade80; }
+    .log-info { color: #94a3b8; }
+    .log-error { color: #f87171; }
+    .status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .status.connected { background: #14532d; color: #4ade80; }
+    .status.disconnected { background: #450a0a; color: #f87171; }
+    .metric.alarm { background: #7f1d1d; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+    .timer-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .timer-row label { font-size: 0.9rem; color: #94a3b8; }
+    .timer-row input {
+      width: 70px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+  </style>
+
+  <a href="Ventus_3_Monitor_Instructions_2023.pdf">View Instructions PDF</a>
+
+</head>
+<body>
+  <h1>Jim Gechie Ventus 3 Training Log</h1>
+  <p class="subtitle">Live metrics · /500m pace · Speed · Heart Rate · Workout timer · Strava export</p>
+
+  <div class="card">
+    <div style="margin-bottom: 14px;">
+      <button id="btnConnect">Connect Rower</button>
+      <button id="btnDisconnect" disabled class="danger">Disconnect</button>
+      <span id="connectionStatus" class="status disconnected">Disconnected</span>
+    </div>
+
+    <div style="margin-bottom: 14px;">
+      <button id="btnConnectHr" class="hr">Connect HR</button>
+      <button id="btnDisconnectHr" disabled class="danger">Disconnect HR</button>
+      <span id="hrStatus" class="status disconnected">No HR</span>
+    </div>
+
+    <div class="timer-row">
+      <label for="timerMinutes">Timer (min):</label>
+      <input id="timerMinutes" type="number" min="0" step="1" placeholder="e.g. 20">
+      <button id="btnSetTimer">Set</button>
+      <button id="btnClearTimer" style="background:#475569;">Clear</button>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <button id="btnStart" disabled class="success">Start Workout</button>
+      <button id="btnStop" disabled class="danger">Stop</button>
+      <button id="btnPollStatus" disabled>Poll Status</button>
+      <button id="btnPollData" disabled>Poll Data</button>
+      <button id="btnExport" disabled class="export">Export TCX (Strava)</button>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="label">Time</div><div class="value" id="mTime">0:00</div></div>
+      <div class="metric"><div class="label">Remaining</div><div class="value" id="mRemaining">–</div></div>
+      <div class="metric"><div class="label">Distance</div><div class="value" id="mDistance">0 m</div></div>
+      <div class="metric"><div class="label">Speed</div><div class="value" id="mSpeed">0.0 km/h</div></div>
+      <div class="metric"><div class="label">/500 m</div><div class="value" id="mPace">–:––</div></div>
+      <div class="metric"><div class="label">Calories</div><div class="value" id="mCalories">0</div></div>
+      <div class="metric"><div class="label">Strokes</div><div class="value" id="mStrokes">0</div></div>
+      <div class="metric"><div class="label">SPM</div><div class="value" id="mSpm">0</div></div>
+      <div class="metric"><div class="label">Watts</div><div class="value" id="mWatts">0</div></div>
+      <div class="metric"><div class="label">Heart Rate</div><div class="value" id="mHr">–</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3 style="font-size:1rem; margin:0;">Log</h3>
+      <button id="btnToggleLog" style="margin:0; padding:6px 12px; font-size:0.85rem;">Show Log</button>
+    </div>
+    <div id="log" style="display:none;"></div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // FitSHOW helpers
+    // ─────────────────────────────────────────────
+    function xorChecksum(bytes) {
+      let cs = 0;
+      for (const b of bytes) cs ^= b;
+      return cs & 0xFF;
+    }
+
+    function buildPacket(...payload) {
+      const body = new Uint8Array(payload);
+      const cs = xorChecksum(body);
+      return new Uint8Array([0x02, ...body, cs, 0x03]);
+    }
+
+    const PKT_STATUS = buildPacket(0x42);
+    const PKT_DATA   = buildPacket(0x43, 0x01);
+    const PKT_START  = buildPacket(0x53, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+    const PKT_STOP   = buildPacket(0x53, 0x03);
+
+    // ─────────────────────────────────────────────
+    // State
+    // ─────────────────────────────────────────────
+    let device = null;
+    let writeChar = null;
+    let notifyChar = null;
+    let pollInterval = null;
+    let writeBusy = false;
+    let writeQueue = [];
+
+    // Heart Rate
+    let hrDevice = null;
+    let hrChar = null;
+
+    // Live values
+    let curTime = 0, curDist = 0, curCal = 0, curStrokes = 0;
+    let curSpm = 0, curWatts = 0, curHr = 0;
+
+    // Workout timer
+    let targetSeconds = null;
+    let alarmFired = false;
+
+    // Speed tracking (derived from distance delta between updates)
+    let lastSpeedDist = null;
+    let lastSpeedWallTime = null;
+    let curSpeedKmh = 0;
+
+    // Session recording
+    let session = { startTime: null, points: [] };
+
+    const logEl = document.getElementById('log');
+
+    function log(msg, type = 'info') {
+      const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      const line = document.createElement('div');
+      line.className = 'log-' + type;
+      line.textContent = '[' + time + '] ' + msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function hex(buf) {
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(' ');
+    }
+
+    function setConnected(connected) {
+      document.getElementById('btnConnect').disabled = connected;
+      document.getElementById('btnDisconnect').disabled = !connected;
+      document.getElementById('btnStart').disabled = !connected;
+      document.getElementById('btnStop').disabled = !connected;
+      document.getElementById('btnPollStatus').disabled = !connected;
+      document.getElementById('btnPollData').disabled = !connected;
+
+      const status = document.getElementById('connectionStatus');
+      status.textContent = connected ? 'Connected' : 'Disconnected';
+      status.className = 'status ' + (connected ? 'connected' : 'disconnected');
+    }
+
+    function setHrConnected(connected) {
+      document.getElementById('btnConnectHr').disabled = connected;
+      document.getElementById('btnDisconnectHr').disabled = !connected;
+      const status = document.getElementById('hrStatus');
+      status.textContent = connected ? 'HR Connected' : 'No HR';
+      status.className = 'status ' + (connected ? 'connected' : 'disconnected');
+    }
+
+    // ─────────────────────────────────────────────
+    // Rower BLE
+    // ─────────────────────────────────────────────
+    async function connect() {
+      try {
+        log('Requesting rower…', 'info');
+        device = await navigator.bluetooth.requestDevice({
+          filters: [
+            { namePrefix: 'FS-' },
+            { namePrefix: 'JLL' },
+            { namePrefix: 'Ventus' },
+            { services: [0xFFF0] }
+          ],
+          optionalServices: [0xFFF0, 0xFFE0, 0xFF00]
+        });
+
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+        log('Connecting to ' + (device.name || 'device') + '…', 'info');
+
+        const server = await device.gatt.connect();
+        log('GATT connected', 'info');
+
+        let service = null;
+        for (const uuid of [0xFFF0, 0xFFE0, 0xFF00]) {
+          try {
+            service = await server.getPrimaryService(uuid);
+            log('Found service 0x' + uuid.toString(16), 'info');
+            break;
+          } catch (e) {}
+        }
+        if (!service) throw new Error('No known FitSHOW service found');
+
+        const chars = await service.getCharacteristics();
+        for (const c of chars) {
+          const props = c.properties;
+          log('Char ' + c.uuid + '  write: ' + (props.write || props.writeWithoutResponse) + '  notify: ' + props.notify, 'info');
+          if (props.write || props.writeWithoutResponse) writeChar = c;
+          if (props.notify || props.indicate) notifyChar = c;
+        }
+
+        if (!writeChar || !notifyChar) throw new Error('Required characteristics not found');
+
+        await notifyChar.startNotifications();
+        notifyChar.addEventListener('characteristicvaluechanged', onNotification);
+        log('Notifications enabled', 'info');
+
+        setConnected(true);
+        startPolling();
+      } catch (err) {
+        log('Connect error: ' + err.message, 'error');
+        setConnected(false);
+      }
+    }
+
+    function onDisconnected() {
+      log('Rower disconnected', 'error');
+      stopPolling();
+      setConnected(false);
+      writeChar = null;
+      notifyChar = null;
+      writeBusy = false;
+      writeQueue = [];
+    }
+
+    async function disconnect() {
+      stopPolling();
+      if (device && device.gatt.connected) device.gatt.disconnect();
+      onDisconnected();
+    }
+
+    function enqueueWrite(packet, label) {
+      writeQueue.push({ packet, label });
+      processQueue();
+    }
+
+    async function processQueue() {
+      if (writeBusy || !writeQueue.length || !writeChar) return;
+      writeBusy = true;
+      const { packet, label } = writeQueue.shift();
+      try {
+        log('→ ' + label + ': ' + hex(packet), 'tx');
+        if (writeChar.properties.writeWithoutResponse) {
+          await writeChar.writeValueWithoutResponse(packet);
+        } else {
+          await writeChar.writeValue(packet);
+        }
+      } catch (err) {
+        log('Write failed: ' + err.message, 'error');
+      } finally {
+        setTimeout(() => {
+          writeBusy = false;
+          processQueue();
+        }, 60);
+      }
+    }
+
+    function onNotification(event) {
+      const data = new Uint8Array(event.target.value.buffer);
+      log('← ' + hex(data), 'rx');
+      parsePacket(data);
+    }
+
+    // ─────────────────────────────────────────────
+    // Heart Rate BLE
+    // ─────────────────────────────────────────────
+    async function connectHR() {
+      try {
+        log('Requesting Heart Rate monitor…', 'info');
+        hrDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ services: ['heart_rate'] }],
+          optionalServices: ['heart_rate']
+        });
+
+        hrDevice.addEventListener('gattserverdisconnected', onHrDisconnected);
+        log('Connecting to ' + (hrDevice.name || 'HR monitor') + '…', 'info');
+
+        const server = await hrDevice.gatt.connect();
+        const service = await server.getPrimaryService('heart_rate');
+        hrChar = await service.getCharacteristic('heart_rate_measurement');
+
+        await hrChar.startNotifications();
+        hrChar.addEventListener('characteristicvaluechanged', onHrNotification);
+
+        log('HR notifications enabled', 'info');
+        setHrConnected(true);
+      } catch (err) {
+        log('HR connect error: ' + err.message, 'error');
+        setHrConnected(false);
+      }
+    }
+
+    function onHrDisconnected() {
+      log('HR monitor disconnected', 'error');
+      hrChar = null;
+      curHr = 0;
+      document.getElementById('mHr').textContent = '–';
+      setHrConnected(false);
+    }
+
+    async function disconnectHR() {
+      if (hrDevice && hrDevice.gatt.connected) {
+        hrDevice.gatt.disconnect();
+      }
+      onHrDisconnected();
+    }
+
+    function onHrNotification(event) {
+      const data = new Uint8Array(event.target.value.buffer);
+      const flags = data[0];
+      let hr;
+
+      if (flags & 0x01) {
+        // 16-bit heart rate
+        hr = data[1] | (data[2] << 8);
+      } else {
+        // 8-bit heart rate
+        hr = data[1];
+      }
+
+      curHr = hr;
+      document.getElementById('mHr').textContent = hr;
+    }
+
+    // ─────────────────────────────────────────────
+    // Packet parsing
+    // ─────────────────────────────────────────────
+    function parsePacket(data) {
+      if (data.length < 4 || data[0] !== 0x02 || data[data.length - 1] !== 0x03) return;
+      const cmd = data[1];
+
+      // STATUS → SPM + Watts
+      if (cmd === 0x42 && data.length >= 13) {
+        const rawPower = data[3] | (data[4] << 8);
+        curSpm   = data[6];
+        curWatts = Math.round(rawPower / 10);
+
+        document.getElementById('mSpm').textContent   = curSpm;
+        document.getElementById('mWatts').textContent = curWatts;
+        recordPoint();
+        return;
+      }
+
+      // DATA → time / distance / calories / strokes
+      if (cmd === 0x43 && data[2] === 0x01 && data.length >= 12) {
+        curTime    = data[3] | (data[4] << 8);
+        curDist    = data[5] | (data[6] << 8);
+        curCal     = Math.round((data[7] | (data[8] << 8)) / 10);   // tenths → whole calories
+        curStrokes = data[9] | (data[10] << 8);
+
+        document.getElementById('mTime').textContent     = formatTime(curTime);
+        document.getElementById('mDistance').textContent = curDist + ' m';
+        document.getElementById('mCalories').textContent = curCal;
+        document.getElementById('mStrokes').textContent  = curStrokes;
+        document.getElementById('mPace').textContent     = formatPace(curTime, curDist);
+        updateSpeed();
+        updateRemaining();
+        recordPoint();
+      }
+    }
+
+    function formatTime(sec) {
+      var m = Math.floor(sec / 60);
+      var s = sec % 60;
+      return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    function formatPace(timeSec, distanceM) {
+      if (distanceM < 10 || timeSec < 1) return '–:––';
+      var paceSec = (timeSec / distanceM) * 500;
+      var m = Math.floor(paceSec / 60);
+      var s = Math.round(paceSec % 60);
+      if (s === 60) { m++; s = 0; }
+      return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    function recordPoint() {
+      if (!session.startTime) return;
+      const last = session.points[session.points.length - 1];
+      if (last && curTime === last.t) return;
+
+      session.points.push({
+        t: curTime,
+        dist: curDist,
+        cal: curCal,
+        strokes: curStrokes,
+        spm: curSpm,
+        watts: curWatts,
+        hr: curHr
+      });
+      document.getElementById('btnExport').disabled = false;
+    }
+
+    // ─────────────────────────────────────────────
+    // Speed
+    // ─────────────────────────────────────────────
+    function updateSpeed() {
+      const now = performance.now();
+      if (lastSpeedWallTime !== null && lastSpeedDist !== null) {
+        const deltaDist = curDist - lastSpeedDist;
+        const deltaT = (now - lastSpeedWallTime) / 1000;
+        if (deltaT > 0.3) { // ignore near-duplicate ticks
+          const mps = deltaDist > 0 ? deltaDist / deltaT : 0;
+          curSpeedKmh = mps * 3.6;
+          document.getElementById('mSpeed').textContent = curSpeedKmh.toFixed(1) + ' km/h';
+          lastSpeedDist = curDist;
+          lastSpeedWallTime = now;
+        }
+      } else {
+        lastSpeedDist = curDist;
+        lastSpeedWallTime = now;
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Workout timer
+    // ─────────────────────────────────────────────
+    function beep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [0, 0.25, 0.5].forEach(delay => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = 880;
+          gain.gain.value = 0.2;
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(ctx.currentTime + delay);
+          osc.stop(ctx.currentTime + delay + 0.18);
+        });
+      } catch (e) { /* audio not available, ignore */ }
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+    }
+
+    function setTimer() {
+      const mins = parseFloat(document.getElementById('timerMinutes').value);
+      if (!mins || mins <= 0) { log('Enter a valid number of minutes first', 'error'); return; }
+      targetSeconds = Math.round(mins * 60);
+      alarmFired = false;
+      document.getElementById('mRemaining').parentElement.classList.remove('alarm');
+      updateRemaining();
+      log('Timer set: ' + mins + ' min', 'info');
+    }
+
+    function clearTimer() {
+      targetSeconds = null;
+      alarmFired = false;
+      document.getElementById('mRemaining').textContent = '–';
+      document.getElementById('mRemaining').parentElement.classList.remove('alarm');
+      log('Timer cleared', 'info');
+    }
+
+    function updateRemaining() {
+      const el = document.getElementById('mRemaining');
+      if (targetSeconds === null) { el.textContent = '–'; return; }
+      const remaining = targetSeconds - curTime;
+      if (remaining <= 0) {
+        el.textContent = '0:00';
+        el.parentElement.classList.add('alarm');
+        if (!alarmFired) {
+          alarmFired = true;
+          beep();
+          log('Timer complete — auto-stopping and exporting TCX', 'info');
+          if (session.startTime) {
+            stopWorkout();
+            exportTCX();
+          }
+        }
+      } else {
+        el.textContent = formatTime(remaining);
+      }
+    }
+
+    document.getElementById('btnSetTimer').addEventListener('click', setTimer);
+    document.getElementById('btnClearTimer').addEventListener('click', clearTimer);
+
+    // ─────────────────────────────────────────────
+    // Polling / Workout control
+    // ─────────────────────────────────────────────
+    function startPolling() {
+      stopPolling();
+      let tick = 0;
+      pollInterval = setInterval(() => {
+        enqueueWrite(PKT_STATUS, 'STATUS');
+        if (tick % 3 === 0) enqueueWrite(PKT_DATA, 'DATA');
+        tick++;
+      }, 450);
+    }
+
+    function stopPolling() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }
+
+    function startWorkout() {
+      session = { startTime: new Date(), points: [] };
+      alarmFired = false;
+      lastSpeedDist = null;
+      lastSpeedWallTime = null;
+      document.getElementById('mRemaining').parentElement.classList.remove('alarm');
+      enqueueWrite(PKT_START, 'START');
+      log('Session recording started', 'info');
+    }
+
+    function stopWorkout() {
+      enqueueWrite(PKT_STOP, 'STOP');
+      log('Session stopped – ' + session.points.length + ' points recorded', 'info');
+    }
+
+    // ─────────────────────────────────────────────
+    // TCX Export (Strava)
+    // ─────────────────────────────────────────────
+    function exportTCX() {
+      if (!session.points.length) {
+        alert('No session data to export');
+        return;
+      }
+
+      const start = session.startTime;
+      const endPoint = session.points[session.points.length - 1];
+      const totalTime = endPoint.t;
+      const totalDist = endPoint.dist;
+      const totalCal  = endPoint.cal;
+
+      let trackpoints = '';
+      session.points.forEach(p => {
+        const ts = new Date(start.getTime() + p.t * 1000).toISOString();
+        trackpoints += `
+      <Trackpoint>
+        <Time>${ts}</Time>
+        <DistanceMeters>${p.dist}</DistanceMeters>
+        <Cadence>${p.spm}</Cadence>
+        ${p.hr ? `<HeartRateBpm><Value>${p.hr}</Value></HeartRateBpm>` : ''}
+        <Extensions>
+          <ns3:TPX xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+            <ns3:Watts>${p.watts}</ns3:Watts>
+          </ns3:TPX>
+        </Extensions>
+      </Trackpoint>`;
+      });
+
+      const tcx = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase
+  xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
+  <Activities>
+    <Activity Sport="Other">
+      <Id>${start.toISOString()}</Id>
+      <Lap StartTime="${start.toISOString()}">
+        <TotalTimeSeconds>${totalTime}</TotalTimeSeconds>
+        <DistanceMeters>${totalDist}</DistanceMeters>
+        <Calories>${totalCal}</Calories>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>${trackpoints}
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>`;
+
+      const blob = new Blob([tcx], { type: 'application/vnd.garmin.tcx+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ventus3_' + start.toISOString().slice(0,19).replace(/[:T]/g, '-') + '.tcx';
+      a.click();
+      URL.revokeObjectURL(url);
+      log('TCX file downloaded – upload at strava.com/upload', 'info');
+    }
+
+    // ─────────────────────────────────────────────
+    // Event listeners
+    // ─────────────────────────────────────────────
+    document.getElementById('btnConnect').addEventListener('click', connect);
+    document.getElementById('btnDisconnect').addEventListener('click', disconnect);
+    document.getElementById('btnConnectHr').addEventListener('click', connectHR);
+    document.getElementById('btnDisconnectHr').addEventListener('click', disconnectHR);
+    document.getElementById('btnStart').addEventListener('click', startWorkout);
+    document.getElementById('btnStop').addEventListener('click', stopWorkout);
+    document.getElementById('btnPollStatus').addEventListener('click', () => enqueueWrite(PKT_STATUS, 'STATUS'));
+    document.getElementById('btnPollData').addEventListener('click', () => enqueueWrite(PKT_DATA, 'DATA'));
+    document.getElementById('btnExport').addEventListener('click', exportTCX);
+
+    document.getElementById('btnToggleLog').addEventListener('click', function() {
+      var logDiv = document.getElementById('log');
+      var btn = document.getElementById('btnToggleLog');
+      if (logDiv.style.display === 'none') {
+        logDiv.style.display = 'block';
+        btn.textContent = 'Hide Log';
+      } else {
+        logDiv.style.display = 'none';
+        btn.textContent = 'Show Log';
+      }
+    });
+  </script>
+</body>
+</html>
