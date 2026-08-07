@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ventus 3 — Rowing TCX Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #12121f;
+  --card: #1e1e2f;
+  --accent: #00d4aa;
+  --accent2: #4d96ff;
+  --accent3: #b066ff;
+  --accent4: #ffb74d;
+  --text: #e6e6f2;
+  --muted: #9999aa;
+  --danger: #ff5c7c;
+  --success: #00d4aa;
+  --warning: #ffb74d;
+  --progress-bg: #2e2e44;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+body { background: var(--bg); color: var(--text); padding: 20px; max-width: 1400px; margin: 0 auto; }
+h1 { text-align: center; margin-bottom: 5px; color: var(--accent); }
+.subtitle { text-align: center; color: var(--muted); margin-bottom: 25px; }
+
+/* Upload Area */
+.upload-area {
+  border: 2px dashed var(--accent); border-radius: 12px; padding: 40px; text-align: center;
+  margin-bottom: 25px; cursor: pointer; transition: all 0.25s; background: rgba(0,212,170,0.05);
+}
+.upload-area:hover, .upload-area.dragover { background: rgba(0,212,170,0.12); border-color: #00f0bc; }
+.upload-area p { font-size: 18px; color: var(--accent); }
+.upload-area span { font-size: 14px; color: var(--muted); }
+input[type="file"] { display: none; }
+
+/* Controls */
+.controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+button {
+  background: linear-gradient(135deg, var(--accent), #00b894); border: none; color: #fff; padding: 10px 18px;
+  border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.15s;
+}
+button:hover { transform: translateY(-1px); }
+button.secondary { background: var(--card); border: 1px solid var(--muted); color: var(--text); }
+button.danger { background: linear-gradient(135deg, var(--danger), #e04060); }
+button.small { padding: 6px 12px; font-size: 13px; }
+
+/* Stats Row */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.stat-card { background: var(--card); padding: 16px; border-radius: 10px; text-align: center; }
+.stat-card .val { font-size: 24px; font-weight: 700; color: var(--accent); }
+.stat-card .lab { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* Goals Section */
+.goals-section { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 25px; }
+.goals-section h2 { font-size: 18px; color: var(--accent2); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+.goal-row { display: flex; align-items: center; gap: 15px; margin-bottom: 18px; flex-wrap: wrap; }
+.goal-label { min-width: 140px; font-weight: 500; }
+.goal-inputs { display: flex; gap: 8px; align-items: center; }
+.goal-inputs input {
+  width: 90px; padding: 8px 10px; border-radius: 6px; border: 1px solid #3a3a55;
+  background: #27273a; color: var(--text); text-align: center; font-size: 15px;
+}
+.goal-inputs select {
+  padding: 8px 10px; border-radius: 6px; border: 1px solid #3a3a55;
+  background: #27273a; color: var(--text); font-size: 15px;
+}
+.goal-unit { color: var(--muted); font-size: 13px; min-width: 60px; }
+.goal-progress { flex: 1; min-width: 200px; }
+.progress-bar { height: 24px; background: var(--progress-bg); border-radius: 12px; overflow: hidden; position: relative; }
+.progress-fill { height: 100%; border-radius: 12px; transition: width 0.4s ease; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; }
+.progress-fill.distance { background: linear-gradient(90deg, #00b894, #00d4aa); }
+.progress-fill.sessions { background: linear-gradient(90deg, #3a7bd5, #4d96ff); }
+.progress-fill.speed { background: linear-gradient(90deg, #f5a623, #ffb74d); }
+.progress-text { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.goal-achieved { color: var(--success); font-weight: 600; margin-left: 10px; }
+.goal-beaten { color: var(--success); font-weight: 600; }
+.best-value { color: var(--accent4); font-weight: 600; }
+
+/* Tables */
+.table-container { overflow-x: auto; margin-bottom: 30px; border-radius: 10px; background: var(--card); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #2e2e44; font-size: 14px; }
+th { background: #27273a; color: var(--accent); font-weight: 600; position: sticky; top: 0; }
+tr:hover { background: #27273a; }
+.empty { text-align: center; padding: 40px; color: var(--muted); }
+
+/* Charts */
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(550px, 1fr)); gap: 25px; margin-bottom: 30px; }
+.chart-card { background: var(--card); border-radius: 12px; padding: 20px; }
+.chart-card h3 { margin-bottom: 15px; color: var(--accent2); font-size: 16px; }
+canvas { width: 100% !important; height: 300px !important; }
+
+/* Toasts */
+#toastContainer { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; max-width: 340px; }
+.toast {
+  background: var(--card); border-left: 4px solid var(--accent); color: var(--text); padding: 12px 16px;
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); font-size: 14px; animation: toastIn 0.25s ease;
+}
+.toast.warn { border-left-color: var(--warning); }
+.toast.err { border-left-color: var(--danger); }
+@keyframes toastIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 1001; padding: 20px; }
+.modal-box { background: var(--card); border-radius: 12px; padding: 20px; max-width: 640px; width: 100%; max-height: 80vh; overflow-y: auto; }
+.modal-box h3 { color: var(--accent2); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+.modal-close { background: transparent; padding: 4px 10px; }
+.goal-history-row { border-bottom: 1px solid #2e2e44; padding: 12px 0; }
+.goal-history-row:last-child { border-bottom: none; }
+.goal-history-row .gh-month { font-weight: 700; color: var(--accent2); margin-bottom: 6px; }
+.goal-history-row .gh-line { font-size: 14px; color: var(--text); margin-bottom: 3px; }
+
+/* Row delete button */
+.row-delete { background: transparent; border: none; color: var(--danger); font-size: 15px; padding: 2px 6px; cursor: pointer; }
+.row-delete:hover { transform: none; opacity: 0.7; }
+
+@media (max-width: 900px) {
+  .goal-row { flex-direction: column; align-items: flex-start; }
+  .goal-progress { width: 100%; }
+  .charts-grid { grid-template-columns: 1fr; }
+  th, td { padding: 8px 6px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<h1>🚣 Ventus 3 — Rowing TCX Tracker</h1>
+<p class="subtitle">Upload .tcx files from your rower • All data stays local • Set monthly goals & track progress</p>
+
+<div class="upload-area" id="dropZone">
+  <p>📁 Drop your .tcx files here or click to select</p>
+  <span>Files are parsed locally & saved to your browser storage</span>
+  <input type="file" id="fileInput" accept=".tcx" multiple>
+</div>
+
+<div class="controls">
+  <button onclick="exportData()">📥 Export CSV</button>
+  <button class="secondary" onclick="renderCharts()">🔄 Refresh Charts</button>
+  <button class="secondary" onclick="showAllGoalsHistory()">📊 Goal History</button>
+  <button class="danger small" onclick="clearAll()">🗑️ Clear Data</button>
+</div>
+
+<div id="toastContainer"></div>
+
+<div class="stats-row" id="statsRow"></div>
+
+<!-- 🎯 Monthly Goals Section -->
+<div class="goals-section">
+  <h2>
+  <span id="goalMonthLabel">🎯 Monthly Goals — </span>
+  <select id="goalMonthSelect" onchange="switchGoalMonth()">
+  <!-- Populated dynamically -->
+  </select>
+  <button class="small secondary" onclick="createNewMonthGoal()">+ New Month</button>
+  </h2>
+
+  <!-- Distance Goal -->
+  <div class="goal-row">
+  <span class="goal-label">📏 Distance Goal</span>
+  <div class="goal-inputs">
+  <input type="number" id="goalDistance" min="1" step="1" placeholder="Target" onchange="saveCurrentGoals()">
+  <span class="goal-unit">km</span>
+  </div>
+  <div class="goal-progress">
+  <div class="progress-bar">
+  <div class="progress-fill distance" id="distProgressFill"></div>
+  <span class="progress-text" id="distProgressText">0 / 0 km (0%)</span>
+  </div>
+  </div>
+  </div>
+
+  <!-- Sessions Goal -->
+  <div class="goal-row">
+  <span class="goal-label">🏋️ Sessions Goal</span>
+  <div class="goal-inputs">
+  <input type="number" id="goalSessions" min="1" step="1" placeholder="Target" onchange="saveCurrentGoals()">
+  <span class="goal-unit">workouts</span>
+  </div>
+  <div class="goal-progress">
+  <div class="progress-bar">
+  <div class="progress-fill sessions" id="sessProgressFill"></div>
+  <span class="progress-text" id="sessProgressText">0 / 0 sessions (0%)</span>
+  </div>
+  </div>
+  </div>
+
+  <!-- Quickest 500m Split Goal -->
+  <div class="goal-row">
+  <span class="goal-label">⚡ Quickest 500m Split</span>
+  <div class="goal-inputs">
+  <input type="text" id="goalSplit" placeholder="MM:SS" onchange="validateSplitInput(this); saveCurrentGoals()">
+  <span class="goal-unit">target</span>
+  </div>
+  <div class="goal-progress">
+  <div class="progress-bar">
+  <div class="progress-fill speed" id="splitProgressFill"></div>
+  <span class="progress-text" id="splitProgressText">— Best: —</span>
+  </div>
+  </div>
+  </div>
+</div>
+
+<div class="table-container">
+  <table id="dataTable">
+  <thead>
+  <tr>
+  <th>Date</th>
+  <th>File Name</th>
+  <th>Time (min)</th>
+  <th>Distance (km)</th>
+  <th>500m Split</th>
+  <th>Calories</th>
+  <th>Avg HR</th>
+  <th>Max HR</th>
+  <th>Avg SPM</th>
+  <th>Total Strokes</th>
+  <th>Avg Speed km/h</th>
+  <th>Avg Watts</th>
+  <th></th>
+  </tr>
+  </thead>
+  <tbody id="tableBody">
+  <tr><td colspan="13" class="empty">No data yet — upload a .tcx file to get started</td></tr>
+  </tbody>
+  </table>
+</div>
+
+<div class="charts-grid" id="chartsContainer" style="display:none;">
+  <div class="chart-card">
+  <h3>📈 Daily Distance</h3>
+  <canvas id="dailyChart"></canvas>
+  </div>
+  <div class="chart-card">
+  <h3>📊 Weekly Total</h3>
+  <canvas id="weeklyChart"></canvas>
+  </div>
+  <div class="chart-card">
+  <h3>📅 Monthly Total & Goals</h3>
+  <canvas id="monthlyChart"></canvas>
+  </div>
+  <div class="chart-card">
+  <h3>⚡ Power vs Distance</h3>
+  <canvas id="powerChart"></canvas>
+  </div>
+</div>
+
+<script>
+// ==== Data Storage ====
+let workouts = [];
+let goals = {}; // { "2026-08": { distanceKm, sessionsCount, bestSplitSec } }
+let currentMonthKey = '';
+const STORAGE_KEY = 'ventus3_rowing_data';
+const GOALS_KEY = 'ventus3_monthly_goals';
+
+// ==== TCX Parser — namespace-agnostic, works regardless of which prefix (or none) the exporting app uses ====
+// Different rowing apps export TCX with different namespace prefixes (tc:, ns2:, none, etc).
+// Matching on a hardcoded "tc:" prefix silently returns zero results for any file that doesn't use it,
+// so we look elements up by local name instead, which works no matter what the document does.
+function byLocalName(root, name) {
+  if (!root) return [];
+  let els = root.getElementsByTagNameNS ? Array.from(root.getElementsByTagNameNS('*', name)) : [];
+  if (!els.length && root.getElementsByTagName) els = Array.from(root.getElementsByTagName(name));
+  return els;
+}
+function firstByLocalName(root, name) {
+  return byLocalName(root, name)[0] || null;
+}
+
+function parseTCX(xmlString, filename) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlString, 'text/xml');
+  if (doc.querySelector('parsererror')) {
+  throw new Error(`Could not parse "${filename}" — the file doesn't look like valid TCX/XML`);
+  }
+
+  const lapEl = firstByLocalName(doc, 'Lap');
+
+  // Per the TCX schema, StartTime is an ATTRIBUTE on <Lap>, not a child element — reading it as a
+  // child (the old selector) always failed and silently fell back to "now", so every imported
+  // workout showed today's date instead of when it actually happened.
+  let startTimeStr = lapEl ? (lapEl.getAttribute('StartTime') || firstByLocalName(lapEl, 'StartTime')?.textContent) : null;
+  if (!startTimeStr) startTimeStr = firstByLocalName(doc, 'Id')?.textContent; // Activity/Id is also a timestamp
+  const startTime = startTimeStr ? new Date(startTimeStr) : new Date();
+  const dateStr = !isNaN(startTime.getTime()) ? startTime.toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA');
+
+  let durationSec = 0, distanceM = 0, calories = null;
+  if (lapEl) {
+  durationSec = parseFloat(firstByLocalName(lapEl, 'TotalTimeSeconds')?.textContent || 0);
+  distanceM = parseFloat(firstByLocalName(lapEl, 'DistanceMeters')?.textContent || 0);
+  const calEl = firstByLocalName(lapEl, 'Calories');
+  calories = calEl ? parseInt(calEl.textContent, 10) : null;
+  }
+
+  const trackpoints = byLocalName(doc, 'Trackpoint');
+  const hrs = [], cadences = [], powers = [];
+  let maxHR = 0;
+  trackpoints.forEach(tp => {
+  const hrbpm = firstByLocalName(tp, 'HeartRateBpm');
+  const hrVal = hrbpm ? firstByLocalName(hrbpm, 'Value')?.textContent : null;
+  if (hrVal) { const v = parseInt(hrVal,10); if (!isNaN(v)) { hrs.push(v); if (v>maxHR) maxHR=v; } }
+
+  // Prefer an explicit stroke-rate field over the generic bike-style <Cadence> element, and only
+  // take ONE value per trackpoint — the old code pushed both when present, inflating the average.
+  const spmEl = firstByLocalName(tp, 'StrokeCadence') || firstByLocalName(tp, 'StrokesPerMinute') || firstByLocalName(tp, 'Cadence');
+  if (spmEl && spmEl.textContent) { const v = parseFloat(spmEl.textContent); if (!isNaN(v)) cadences.push(v); }
+
+  const wEl = firstByLocalName(tp, 'Watts');
+  if (wEl && wEl.textContent) { const v = parseFloat(wEl.textContent); if (!isNaN(v)) powers.push(v); }
+  });
+
+  const durationMin = +(durationSec / 60).toFixed(2);
+  const distanceKm = +(distanceM / 1000).toFixed(3);
+  const avgSpeed = durationSec > 0 ? +((distanceKm / durationSec) * 3600).toFixed(2) : null;
+
+  let split500 = null, split500Sec = null;
+  if (distanceM > 0) {
+  split500Sec = (durationSec / distanceM) * 500;
+  const m = Math.floor(split500Sec / 60);
+  const s = Math.round(split500Sec % 60);
+  split500 = `${m}:${s.toString().padStart(2,'0')}`;
+  }
+
+  const avgHR = hrs.length ? Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length) : null;
+  maxHR = maxHR || (hrs.length ? Math.max(...hrs) : null);
+  const avgSPM = cadences.length ? +(cadences.reduce((a,b)=>a+b,0)/cadences.length).toFixed(1) : null;
+  const avgWatts = powers.length ? +(powers.reduce((a,b)=>a+b,0)/powers.length).toFixed(1) : null;
+  const totalStrokes = avgSPM ? Math.round(avgSPM * durationMin) : null;
+
+  return {
+  id: `${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+  date: dateStr, filename, durationMin, distanceKm,
+  split500, split500Sec, calories, avgHR, maxHR,
+  avgSPM, totalStrokes, avgSpeed, avgWatts
+  };
+}
+
+// ==== Split Time Helpers ====
+function splitToSec(str) {
+  if (!str) return null;
+  const parts = str.trim().split(':').map(Number);
+  if (parts.length === 2) return parts[0]*60 + parts[1];
+  return null;
+}
+function secToSplit(sec) {
+  if (!sec) return '—';
+  const m = Math.floor(sec/60), s = Math.round(sec%60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+function validateSplitInput(el) {
+  let v = el.value.trim();
+  if (!v) return;
+  if (/^\d+$/.test(v)) v = `0:${v.padStart(2,'0')}`;
+  else if (/^\d:\d$/.test(v)) v = `0${v[0]}:0${v[2]}`;
+  else if (/^\d:\d\d$/.test(v)) v = `0${v}`;
+  el.value = v;
+}
+
+// ==== Storage ====
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts)); }
+function saveGoals() { localStorage.setItem(GOALS_KEY, JSON.stringify(goals)); }
+function loadData() {
+  const d = localStorage.getItem(STORAGE_KEY); if(d) workouts = JSON.parse(d);
+  const g = localStorage.getItem(GOALS_KEY); if(g) goals = JSON.parse(g);
+  // Older saved data may predate per-row IDs — backfill so delete works for everyone
+  let backfilled = false;
+  workouts.forEach(w => { if (!w.id) { w.id = `${Date.now()}_${Math.random().toString(36).slice(2,8)}`; backfilled = true; } });
+  if (backfilled) saveData();
+}
+
+function deleteWorkout(id) {
+  if (!confirm('Delete this workout? This cannot be undone.')) return;
+  workouts = workouts.filter(w => w.id !== id);
+  saveData();
+  updateGoalProgress();
+  renderAll();
+  showToast('Workout deleted', 'ok');
+}
+function isDuplicate(rec) {
+  return workouts.some(w =>
+  w.filename === rec.filename ||
+  (w.date === rec.date && Math.abs(w.durationMin - rec.durationMin) < 0.1 && Math.abs(w.distanceKm - rec.distanceKm) < 0.01)
+  );
+}
+
+// ==== Month Management ====
+function getMonthKey(dateStr) { return dateStr.slice(0,7); }
+function getCurrentMonthKey() { return new Date().toISOString().slice(0,7); }
+function getMonthsList() {
+  const allMonths = new Set(workouts.map(w => getMonthKey(w.date)));
+  Object.keys(goals).forEach(m => allMonths.add(m));
+  return Array.from(allMonths).sort().reverse();
+}
+function initMonthSelector() {
+  const sel = document.getElementById('goalMonthSelect');
+  sel.innerHTML = '';
+  getMonthsList().forEach(m => {
+  const opt = document.createElement('option');
+  opt.value = m; opt.textContent = m;
+  if (m === currentMonthKey) opt.selected = true;
+  sel.appendChild(opt);
+  });
+}
+function switchGoalMonth() {
+  currentMonthKey = document.getElementById('goalMonthSelect').value;
+  loadCurrentGoals();
+  updateGoalProgress();
+}
+function createNewMonthGoal() {
+  const m = prompt('Enter month (YYYY-MM):', getCurrentMonthKey());
+  if (!m) return;
+  if (!/^\d{4}-\d{2}$/.test(m)) return showToast('Use format YYYY-MM e.g. 2026-08', 'warn');
+  if (!goals[m]) goals[m] = { distanceKm: 0, sessionsCount: 0, bestSplitSec: null };
+  currentMonthKey = m;
+  saveGoals(); initMonthSelector();
+  document.getElementById('goalMonthSelect').value = m;
+  loadCurrentGoals(); updateGoalProgress();
+}
+function loadCurrentGoals() {
+  const g = goals[currentMonthKey] || { distanceKm: 0, sessionsCount: 0, bestSplitSec: null };
+  document.getElementById('goalDistance').value = g.distanceKm || '';
+  document.getElementById('goalSessions').value = g.sessionsCount || '';
+  document.getElementById('goalSplit').value = g.bestSplitSec ? secToSplit(g.bestSplitSec) : '';
+}
+function saveCurrentGoals() {
+  if (!goals[currentMonthKey]) goals[currentMonthKey] = {};
+  goals[currentMonthKey].distanceKm = parseFloat(document.getElementById('goalDistance').value) || 0;
+  goals[currentMonthKey].sessionsCount = parseInt(document.getElementById('goalSessions').value) || 0;
+  const splitVal = document.getElementById('goalSplit').value.trim();
+  goals[currentMonthKey].bestSplitSec = splitVal ? splitToSec(splitVal) : null;
+  saveGoals();
+}
+
+// ==== Goal Progress Calculation ====
+function getMonthData(monthKey) {
+  return workouts.filter(w => getMonthKey(w.date) === monthKey);
+}
+function updateGoalProgress() {
+  const monthWorkouts = getMonthData(currentMonthKey);
+  const goal = goals[currentMonthKey] || { distanceKm:0, sessionsCount:0, bestSplitSec:null };
+
+  // Distance
+  const actualKm = monthWorkouts.reduce((s,w) => s+w.distanceKm, 0);
+  const targetKm = goal.distanceKm || 1;
+  const distPct = Math.min(100, Math.round((actualKm / targetKm) * 100));
+  document.getElementById('distProgressFill').style.width = `${distPct}%`;
+  document.getElementById('distProgressText').textContent =
+  `${actualKm.toFixed(1)} / ${targetKm} km (${distPct}%)${actualKm >= targetKm ? ' ✅ GOAL!' : ''}`;
+
+  // Sessions
+  const actualSessions = monthWorkouts.length;
+  const targetSessions = goal.sessionsCount || 1;
+  const sessPct = Math.min(100, Math.round((actualSessions / targetSessions) * 100));
+  document.getElementById('sessProgressFill').style.width = `${sessPct}%`;
+  document.getElementById('sessProgressText').textContent =
+  `${actualSessions} / ${targetSessions} sessions (${sessPct}%)${actualSessions >= targetSessions ? ' ✅ GOAL!' : ''}`;
+
+  // Quickest Split — LOWER is better!
+  const validSplits = monthWorkouts.filter(w => w.split500Sec).map(w => w.split500Sec);
+  const bestActualSec = validSplits.length ? Math.min(...validSplits) : null;
+  const targetSplitSec = goal.bestSplitSec;
+  let splitText = 'No data yet';
+  let splitPct = 0;
+
+  if (bestActualSec) {
+  splitText = `Best: ${secToSplit(bestActualSec)}`;
+  if (targetSplitSec) {
+  // % based on how close we are — reaching or beating target = 100%
+  if (bestActualSec <= targetSplitSec) {
+  splitPct = 100;
+  splitText += ` — Target ${secToSplit(targetSplitSec)} ✅ GOAL BEAT!`;
+  } else {
+  // 0% → target, 100% = halfway there
+  const maxDiff = targetSplitSec * 0.3;
+  const diff = bestActualSec - targetSplitSec;
+  splitPct = Math.max(0, Math.min(95, Math.round((1 - diff / maxDiff) * 100)));
+  splitText += ` — Target ${secToSplit(targetSplitSec)}`;
+  }
+  }
+  } else if (targetSplitSec) {
+  splitText = `Target: ${secToSplit(targetSplitSec)} — No workouts yet`;
+  }
+  document.getElementById('splitProgressFill').style.width = `${splitPct}%`;
+  document.getElementById('splitProgressText').textContent = splitText;
+}
+
+// ==== File Handling ====
+async function handleFiles(files) {
+  const imported = [];
+  let skippedDupes = 0;
+  const failed = [];
+
+  for (const file of files) {
+  if (!file.name.toLowerCase().endsWith('.tcx')) continue;
+  try {
+  const text = await file.text();
+  const rec = parseTCX(text, file.name);
+  if (isDuplicate(rec)) { skippedDupes++; continue; }
+  workouts.push(rec);
+  imported.push(rec);
+  } catch (err) {
+  failed.push(file.name);
+  console.error('Failed to parse TCX file:', file.name, err);
+  }
+  }
+
+  workouts.sort((a,b) => a.date.localeCompare(b.date));
+  saveData();
+  initMonthSelector();
+  updateGoalProgress();
+  renderAll();
+
+  // Reset the input so selecting the exact same file(s) again still fires a change event
+  document.getElementById('fileInput').value = '';
+
+  const parts = [];
+  if (imported.length) parts.push(`✅ Imported ${imported.length} new workout${imported.length===1?'':'s'}`);
+  if (skippedDupes) parts.push(`⏭️ Skipped ${skippedDupes} duplicate${skippedDupes===1?'':'s'}`);
+  if (failed.length) parts.push(`⚠️ Couldn't read: ${failed.join(', ')}`);
+  if (parts.length) showToast(parts.join(' · '), failed.length ? 'warn' : 'ok');
+}
+
+// ==== Rendering ====
+function renderStats() {
+  const totalKm = workouts.reduce((s,w) => s+w.distanceKm, 0);
+  const totalMin = workouts.reduce((s,w) => s+w.durationMin, 0);
+  const totalCal = workouts.reduce((s,w) => s+(w.calories||0), 0);
+  const totalStrokes = workouts.reduce((s,w) => s+(w.totalStrokes||0), 0);
+  const validSplits = workouts.filter(w => w.split500Sec).map(w => w.split500Sec);
+  const bestSplit = validSplits.length ? Math.min(...validSplits) : null;
+
+  document.getElementById('statsRow').innerHTML = `
+  <div class="stat-card"><div class="val">${workouts.length}</div><div class="lab">Workouts</div></div>
+  <div class="stat-card"><div class="val">${totalKm.toFixed(1)}</div><div class="lab">Total km</div></div>
+  <div class="stat-card"><div class="val">${Math.round(totalMin)}</div><div class="lab">Total mins</div></div>
+  <div class="stat-card"><div class="val">${totalCal}</div><div class="lab">Calories</div></div>
+  <div class="stat-card"><div class="val">${totalStrokes.toLocaleString()}</div><div class="lab">Strokes</div></div>
+  <div class="stat-card"><div class="val best-value">${secToSplit(bestSplit)}</div><div class="lab">Best 500m</div></div>
+  `;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  if (!workouts.length) {
+  tbody.innerHTML = '<tr><td colspan="13" class="empty">No data yet — upload a .tcx file to get started</td></tr>';
+  return;
+  }
+  tbody.innerHTML = [...workouts].reverse().map(w => `
+  <tr>
+  <td>${w.date}</td>
+  <td>${w.filename}</td>
+  <td>${w.durationMin}</td>
+  <td>${w.distanceKm}</td>
+  <td>${w.split500 || '—'}</td>
+  <td>${w.calories ?? '—'}</td>
+  <td>${w.avgHR ?? '—'}</td>
+  <td>${w.maxHR ?? '—'}</td>
+  <td>${w.avgSPM ?? '—'}</td>
+  <td>${w.totalStrokes ?? '—'}</td>
+  <td>${w.avgSpeed ?? '—'}</td>
+  <td>${w.avgWatts ?? '—'}</td>
+  <td><button class="row-delete" title="Delete workout" onclick="deleteWorkout('${w.id}')">🗑️</button></td>
+  </tr>
+  `).join('');
+}
+
+let chartInstances = {};
+function destroyCharts() {
+  Object.values(chartInstances).forEach(c => c?.destroy());
+  chartInstances = {};
+}
+
+function renderCharts() {
+  if (!workouts.length) return;
+  document.getElementById('chartsContainer').style.display = 'grid';
+  destroyCharts();
+
+  // Daily
+  chartInstances.daily = new Chart(document.getElementById('dailyChart'), {
+  type: 'bar',
+  data: {
+  labels: workouts.map(w => w.date),
+  datasets: [{ label: 'km', data: workouts.map(w => w.distanceKm),
+  backgroundColor: 'rgba(0,212,170,0.6)', borderColor: '#00d4aa', borderWidth:1, borderRadius:6 }]
+  },
+  options: { responsive:true, maintainAspectRatio:false,
+  plugins: { legend:{display:false}, tooltip:{
+  callbacks:{ label:ctx=>{ const w=workouts[ctx.dataIndex]; return[
+  `Distance: ${w.distanceKm} km`, `Time: ${w.durationMin} min`,
+  `500m: ${w.split500||'—'}`, `Calories: ${w.calories??'—'}`,
+  `SPM: ${w.avgSPM??'—'}`, `Watts: ${w.avgWatts??'—'}`
+  ]; } } } },
+  scales:{x:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}},y:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}}}
+  }
+  });
+
+  // Weekly
+  const weeks = {};
+  workouts.forEach(w=>{const d=new Date(w.date),wky=`${d.getFullYear()}-W${Math.ceil((d.getTime()-new Date(d.getFullYear(),0,1))/(7*86400000))}`;
+  if(!weeks[wky])weeks[wky]={km:0,min:0,cal:0,strokes:0};
+  weeks[wky].km+=w.distanceKm; weeks[wky].min+=w.durationMin; weeks[wky].cal+=w.calories||0; weeks[wky].strokes+=w.totalStrokes||0;
+  });
+  const weekLabels=Object.keys(weeks).sort();
+  chartInstances.weekly=new Chart(document.getElementById('weeklyChart'),{
+  type:'bar',data:{labels:weekLabels,datasets:[{label:'km',data:weekLabels.map(w=>weeks[w].km.toFixed(2)),
+  backgroundColor:'rgba(77,150,255,0.6)',borderColor:'#4d96ff',borderWidth:1,borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{
+  callbacks:{label:ctx=>{const w=weeks[weekLabels[ctx.dataIndex]];return[
+  `Total: ${w.km.toFixed(2)} km`, `Time: ${Math.round(w.min)} min`,
+  `Calories: ${w.cal}`, `Strokes: ${w.strokes.toLocaleString()}`
+  ];}}}},
+  scales:{x:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}},y:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}}}}
+  });
+
+  // Monthly with Goal Lines
+  const months = {};
+  workouts.forEach(w=>{const m=w.date.slice(0,7); if(!months[m])months[m]={km:0,count:0}; months[m].km+=w.distanceKm; months[m].count++;});
+  const monthLabels=Object.keys(months).sort();
+  const monthKm=monthLabels.map(m=>months[m].km.toFixed(2));
+  const goalKmLine=monthLabels.map(m=>goals[m]?.distanceKm||null);
+
+  chartInstances.monthly=new Chart(document.getElementById('monthlyChart'),{
+  type:'bar',data:{labels:monthLabels,
+  datasets:[
+  {label:'Distance (km)',data:monthKm,backgroundColor:'rgba(176,102,255,0.6)',borderColor:'#b066ff',borderWidth:1,borderRadius:6},
+  {label:'Goal Target',data:goalKmLine,type:'line',borderColor:'#ffb74d',borderWidth:3,pointBackgroundColor:'#ffb74d',pointRadius:5,fill:false,borderDash:[6,4],tension:0}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{
+  tooltip:{callbacks:{label:ctx=>{
+  if(ctx.datasetIndex===1)return `Goal: ${ctx.raw||'Not set'} km`;
+  const m=monthLabels[ctx.dataIndex]; const wm=getMonthData(m);
+  return [`Total: ${months[m].km.toFixed(2)} km`, `Sessions: ${wm.length}`];
+  }}}},
+  scales:{x:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}},y:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}}}}
+  });
+
+  // Power vs Distance
+  const pwData=workouts.filter(w=>w.avgWatts);
+  chartInstances.power=new Chart(document.getElementById('powerChart'),{
+  type:'scatter',data:{datasets:[{label:'Workouts',data:pwData.map(w=>({x:w.avgWatts,y:w.distanceKm,...w})),
+  backgroundColor:'rgba(255,183,77,0.7)',borderColor:'#ffb74d',borderWidth:1,pointRadius:7}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{
+  callbacks:{label:ctx=>{const w=ctx.raw;return[`Date: ${w.date}`,`${w.distanceKm} km @ ${w.avgWatts}W`,`500m: ${w.split500||'—'}`,'SPM: '+(w.avgSPM||'—')];}}}},
+  scales:{x:{title:{display:true,text:'Avg Power (Watts)',color:'#ffb74d'},ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}},
+  y:{title:{display:true,text:'Distance (km)',color:'#00d4aa'},ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}}}}
+  });
+}
+
+function showAllGoalsHistory() {
+  const months = Object.keys(goals).sort().reverse();
+  if (!months.length) return showToast('No goals set yet — set a target above first!', 'warn');
+
+  const rowsHtml = months.map(m => {
+  const g = goals[m];
+  const data = getMonthData(m);
+  const actualKm = data.reduce((s,w)=>s+w.distanceKm,0);
+  const splits = data.filter(w=>w.split500Sec).map(w=>w.split500Sec);
+  const bestSplitSec = splits.length ? Math.min(...splits) : null;
+  const distHit = g.distanceKm && actualKm >= g.distanceKm;
+  const sessHit = g.sessionsCount && data.length >= g.sessionsCount;
+  const splitHit = g.bestSplitSec && bestSplitSec && bestSplitSec <= g.bestSplitSec;
+  return `
+  <div class="goal-history-row">
+  <div class="gh-month">📅 ${m}</div>
+  <div class="gh-line">📏 Distance: ${actualKm.toFixed(1)} / ${g.distanceKm||0} km ${distHit?'✅':''}</div>
+  <div class="gh-line">🏋️ Sessions: ${data.length} / ${g.sessionsCount||0} ${sessHit?'✅':''}</div>
+  <div class="gh-line">⚡ Best 500m: ${bestSplitSec ? secToSplit(bestSplitSec) : '—'} / ${g.bestSplitSec ? secToSplit(g.bestSplitSec) : 'Not set'} ${splitHit?'✅':''}</div>
+  </div>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+  <div class="modal-box">
+  <h3>📊 Goal History <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></h3>
+  ${rowsHtml}
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+// ==== Toasts ====
+function showToast(message, kind) {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${kind === 'warn' ? 'warn' : kind === 'err' ? 'err' : ''}`.trim();
+  el.textContent = message;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+function renderAll() { renderStats(); renderTable(); renderCharts(); }
+
+// ==== Extras ====
+function exportData() {
+  if (!workouts.length) return showToast('No data to export', 'warn');
+  const h=['Date','File Name','Duration (min)','Distance (km)','500m Split','Calories','Avg HR','Max HR','Avg Stroke Rate (spm)','Total Strokes','Avg Speed (km/h)','Avg Power (watts)'];
+  const rows=[...workouts].sort((a,b)=>a.date.localeCompare(b.date)).map(w=>[w.date,w.filename,w.durationMin,w.distanceKm,w.split500,w.calories,w.avgHR,w.maxHR,w.avgSPM,w.totalStrokes,w.avgSpeed,w.avgWatts]);
+  // Rows must be newline-separated, not space-separated, or every workout ends up crammed onto one line.
+  const csv=[h.join(','),...rows.map(r=>r.map(v=>v===null||v===undefined?'':`"${v}"`).join(','))].join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); // BOM so Excel opens it with correct encoding
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`rowing_log_${new Date().toLocaleDateString('en-CA')}.csv`; a.click();
+}
+
+function clearAll() {
+  if(!confirm('⚠️ Delete ALL workouts AND goals? Cannot undo!'))return;
+  workouts=[]; goals={}; localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(GOALS_KEY);
+  document.getElementById('chartsContainer').style.display='none';
+  initMonthSelector(); updateGoalProgress(); renderAll();
+}
+
+// ==== Events ====
+document.addEventListener('DOMContentLoaded',()=>{
+  loadData();
+  currentMonthKey = getCurrentMonthKey();
+  if (!goals[currentMonthKey]) goals[currentMonthKey] = { distanceKm:0, sessionsCount:0, bestSplitSec:null };
+  initMonthSelector();
+  loadCurrentGoals();
+  updateGoalProgress();
+  renderAll();
+
+  const dropZone=document.getElementById('dropZone');
+  const fileInput=document.getElementById('fileInput');
+  dropZone.addEventListener('click',()=>fileInput.click());
+  fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+  ['dragenter','dragover'].forEach(evt=>dropZone.addEventListener(evt,e=>{e.preventDefault();dropZone.classList.add('dragover');}));
+  ['dragleave','drop'].forEach(evt=>dropZone.addEventListener(evt,e=>{e.preventDefault();dropZone.classList.remove('dragover');}));
+  dropZone.addEventListener('drop',e=>handleFiles(e.dataTransfer.files));
+});
+</script>
+</body>
+</html>
