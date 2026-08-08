@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Steps & Heart Points Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #12121f;
+  --card: #1e1e2f;
+  --accent: #00d4aa;
+  --accent4: #ffb74d;
+  --heart: #ff6b9d;
+  --sleep: #818cf8;
+  --text: #e6e6f2;
+  --muted: #9999aa;
+  --danger: #ff5c7c;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+body { background: var(--bg); color: var(--text); padding: 20px; max-width: 900px; margin: 0 auto; }
+h1 { text-align: center; margin-bottom: 5px; color: var(--accent4); }
+.subtitle { text-align: center; color: var(--muted); margin-bottom: 20px; }
+
+.back-link { display: block; text-align: center; margin-bottom: 20px; }
+.back-link a { color: var(--accent); text-decoration: none; font-size: 14px; }
+.back-link a:hover { text-decoration: underline; }
+
+button {
+  background: linear-gradient(135deg, var(--accent4), #e0952f); border: none; color: #14140f; padding: 10px 18px;
+  border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: transform 0.1s;
+}
+button:hover { transform: translateY(-1px); }
+button.secondary { background: var(--card); border: 1px solid var(--muted); color: var(--text); font-weight: 400; }
+button.heart { background: linear-gradient(135deg, var(--heart), #e0407a); color: #fff; }
+button.sleep { background: linear-gradient(135deg, var(--sleep), #5b5fc7); color: #fff; }
+button.danger { background: linear-gradient(135deg, var(--danger), #e04060); color: #fff; }
+button.small { padding: 6px 12px; font-size: 13px; }
+
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 12px; margin-bottom: 25px; }
+.stat-card { background: var(--card); padding: 16px; border-radius: 10px; text-align: center; }
+.stat-card .val { font-size: 24px; font-weight: 700; color: var(--accent4); }
+.stat-card .lab { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.steps-section { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 25px; }
+.steps-input-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.steps-input-row input[type="date"], .steps-input-row input[type="number"] {
+  background: var(--bg); border: 1px solid var(--muted); color: var(--text);
+  padding: 8px 10px; border-radius: 6px; font-size: 14px;
+}
+.steps-input-row input[type="number"] { width: 120px; }
+.steps-log { display: flex; flex-wrap: wrap; gap: 8px; }
+.steps-chip {
+  background: var(--bg); border-radius: 20px; padding: 6px 8px 6px 14px; font-size: 13px;
+  display: flex; align-items: center; gap: 8px; color: var(--text);
+}
+.steps-chip .steps-chip-val { color: var(--accent4); font-weight: 700; }
+.steps-chip.hp .steps-chip-val { color: var(--heart); }
+.steps-chip.sleep .steps-chip-val { color: var(--sleep); }
+.steps-chip button { background: transparent; border: none; color: var(--danger); cursor: pointer; padding: 2px 4px; margin: 0; font-size: 13px; }
+
+.chart-card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 25px; height: 340px; }
+.chart-card h3 { margin-bottom: 12px; color: var(--accent4); font-size: 16px; }
+.chart-card canvas { max-height: 270px; }
+
+.controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+
+#toastContainer { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; max-width: 340px; }
+.toast {
+  background: var(--card); border-left: 4px solid var(--accent4); color: var(--text); padding: 12px 16px;
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); font-size: 14px; animation: toastIn 0.25s ease;
+}
+.toast.warn { border-left-color: #ffb74d; }
+.toast.err { border-left-color: var(--danger); }
+@keyframes toastIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
+
+.empty { text-align: center; color: var(--muted); padding: 20px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="back-link"><a href="JTGStrava.html">← Back to Rowing Log</a></div>
+<h1>📋 Daily Activity Log</h1>
+<p class="subtitle">Steps from FitCloud · Heart Points from Google Fit · Sleep logged manually</p>
+
+<div id="toastContainer"></div>
+
+<div class="stats-row" id="statsRow"></div>
+
+<div class="steps-section">
+  <h2 style="margin-bottom:14px;">🚶 Steps — Log a Day</h2>
+  <div class="steps-input-row">
+  <input type="date" id="stepsDate">
+  <input type="number" id="stepsCount" min="0" step="1" placeholder="e.g. 8500">
+  <button onclick="saveSteps()">💾 Save Steps</button>
+  </div>
+  <div class="steps-log" id="stepsLog"></div>
+</div>
+
+<div class="chart-card">
+  <h3>📊 Steps Over Time</h3>
+  <canvas id="stepsChart"></canvas>
+</div>
+
+<div class="steps-section">
+  <h2 style="margin-bottom:14px;">❤️ Heart Points — Log a Day</h2>
+  <div class="steps-input-row">
+  <input type="date" id="hpDate">
+  <input type="number" id="hpCount" min="0" step="1" placeholder="e.g. 45">
+  <button class="heart" onclick="saveHP()">💾 Save Heart Points</button>
+  </div>
+  <div class="steps-log" id="hpLog"></div>
+</div>
+
+<div class="chart-card">
+  <h3>📊 Heart Points Over Time</h3>
+  <canvas id="hpChart"></canvas>
+</div>
+
+<div class="steps-section">
+  <h2 style="margin-bottom:14px;">🌙 Sleep — Log a Night</h2>
+  <div class="steps-input-row">
+  <input type="date" id="sleepDate">
+  <input type="number" id="sleepHours" min="0" max="24" step="0.25" placeholder="e.g. 7.5">
+  <label style="font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;">
+  Target: <input type="number" id="sleepTarget" min="0" max="24" step="0.25" style="width:70px;" value="8">h
+  </label>
+  <button class="sleep" onclick="saveSleep()">💾 Save Sleep</button>
+  </div>
+  <div class="steps-log" id="sleepLog"></div>
+</div>
+
+<div class="chart-card">
+  <h3>📊 Sleep Over Time</h3>
+  <canvas id="sleepChart"></canvas>
+</div>
+
+<div class="controls">
+  <button class="secondary" onclick="exportBackup()">💾 Backup (JSON)</button>
+  <button class="secondary" onclick="document.getElementById('restoreInput').click()">📤 Restore Backup</button>
+  <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importBackup(event)">
+  <button class="danger small" onclick="clearAllData()">🗑️ Clear All Data</button>
+</div>
+
+<script>
+// ==== Data ====
+let steps = {}; // { "2026-08-15": 8500 }
+let heartPoints = {}; // { "2026-08-15": 45 }
+let sleep = {}; // { "2026-08-15": 7.5 }
+let sleepTarget = 8;
+const STEPS_KEY = 'ventus3_daily_steps'; // same key JTGStrava.html used, so existing data carries over
+const HP_KEY = 'ventus3_heart_points';
+const SLEEP_KEY = 'ventus3_sleep_hours';
+const SLEEP_TARGET_KEY = 'ventus3_sleep_target';
+
+function persistSteps() { localStorage.setItem(STEPS_KEY, JSON.stringify(steps)); }
+function loadSteps() { const s = localStorage.getItem(STEPS_KEY); if (s) steps = JSON.parse(s); }
+function persistHP() { localStorage.setItem(HP_KEY, JSON.stringify(heartPoints)); }
+function loadHP() { const h = localStorage.getItem(HP_KEY); if (h) heartPoints = JSON.parse(h); }
+function persistSleep() { localStorage.setItem(SLEEP_KEY, JSON.stringify(sleep)); }
+function loadSleep() { const s = localStorage.getItem(SLEEP_KEY); if (s) sleep = JSON.parse(s); }
+function persistSleepTarget() { localStorage.setItem(SLEEP_TARGET_KEY, String(sleepTarget)); }
+function loadSleepTarget() { const t = localStorage.getItem(SLEEP_TARGET_KEY); if (t !== null) sleepTarget = parseFloat(t) || 8; }
+
+// ==== Toasts ====
+function showToast(message, kind) {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${kind === 'warn' ? 'warn' : kind === 'err' ? 'err' : ''}`.trim();
+  el.textContent = message;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+// ==== Save / Delete / Render ====
+function saveSteps() {
+  const dateEl = document.getElementById('stepsDate');
+  const countEl = document.getElementById('stepsCount');
+  const date = dateEl.value;
+  const count = parseInt(countEl.value, 10);
+  if (!date) return showToast('Pick a date first', 'warn');
+  if (isNaN(count) || count < 0) return showToast('Enter a valid step count', 'warn');
+  steps[date] = count;
+  persistSteps();
+  countEl.value = '';
+  renderAll();
+  showToast(`Saved ${count.toLocaleString()} steps for ${date}`, 'ok');
+}
+
+function deleteSteps(date) {
+  delete steps[date];
+  persistSteps();
+  renderAll();
+}
+
+function renderStepsLog() {
+  const el = document.getElementById('stepsLog');
+  const dates = Object.keys(steps).sort().reverse();
+  if (!dates.length) { el.innerHTML = '<span class="empty" style="padding:0;">No steps logged yet</span>'; return; }
+  el.innerHTML = dates.map(d => `
+  <span class="steps-chip">${d}: <span class="steps-chip-val">${steps[d].toLocaleString()}</span>
+  <button title="Delete" onclick="deleteSteps('${d}')">🗑️</button></span>
+  `).join('');
+}
+
+// ==== Heart Points ====
+function saveHP() {
+  const dateEl = document.getElementById('hpDate');
+  const countEl = document.getElementById('hpCount');
+  const date = dateEl.value;
+  const count = parseInt(countEl.value, 10);
+  if (!date) return showToast('Pick a date first', 'warn');
+  if (isNaN(count) || count < 0) return showToast('Enter a valid heart points value', 'warn');
+  heartPoints[date] = count;
+  persistHP();
+  countEl.value = '';
+  renderAll();
+  showToast(`Saved ${count.toLocaleString()} heart points for ${date}`, 'ok');
+}
+
+function deleteHP(date) {
+  delete heartPoints[date];
+  persistHP();
+  renderAll();
+}
+
+function renderHPLog() {
+  const el = document.getElementById('hpLog');
+  const dates = Object.keys(heartPoints).sort().reverse();
+  if (!dates.length) { el.innerHTML = '<span class="empty" style="padding:0;">No heart points logged yet</span>'; return; }
+  el.innerHTML = dates.map(d => `
+  <span class="steps-chip hp">${d}: <span class="steps-chip-val">${heartPoints[d].toLocaleString()}</span>
+  <button title="Delete" onclick="deleteHP('${d}')">🗑️</button></span>
+  `).join('');
+}
+
+// ==== Sleep ====
+function saveSleep() {
+  const dateEl = document.getElementById('sleepDate');
+  const hoursEl = document.getElementById('sleepHours');
+  const targetEl = document.getElementById('sleepTarget');
+  const date = dateEl.value;
+  const hours = parseFloat(hoursEl.value);
+  const target = parseFloat(targetEl.value);
+  if (!date) return showToast('Pick a date first', 'warn');
+  if (isNaN(hours) || hours < 0 || hours > 24) return showToast('Enter a valid number of hours (0–24)', 'warn');
+  sleep[date] = hours;
+  persistSleep();
+  if (!isNaN(target) && target > 0) { sleepTarget = target; persistSleepTarget(); }
+  hoursEl.value = '';
+  renderAll();
+  showToast(`Saved ${hours}h sleep for ${date}`, 'ok');
+}
+
+function deleteSleep(date) {
+  delete sleep[date];
+  persistSleep();
+  renderAll();
+}
+
+function renderSleepLog() {
+  const el = document.getElementById('sleepLog');
+  const dates = Object.keys(sleep).sort().reverse();
+  if (!dates.length) { el.innerHTML = '<span class="empty" style="padding:0;">No sleep logged yet</span>'; return; }
+  el.innerHTML = dates.map(d => `
+  <span class="steps-chip sleep">${d}: <span class="steps-chip-val">${sleep[d]}h</span>
+  <button title="Delete" onclick="deleteSleep('${d}')">🗑️</button></span>
+  `).join('');
+}
+
+function renderStats() {
+  const sDates = Object.keys(steps);
+  const sTotal = sDates.reduce((s,d) => s + steps[d], 0);
+  const sAvg = sDates.length ? Math.round(sTotal / sDates.length) : 0;
+  const sBest = sDates.length ? Math.max(...sDates.map(d => steps[d])) : 0;
+
+  const hDates = Object.keys(heartPoints);
+  const hTotal = hDates.reduce((s,d) => s + heartPoints[d], 0);
+  const hAvg = hDates.length ? Math.round(hTotal / hDates.length) : 0;
+  const hBest = hDates.length ? Math.max(...hDates.map(d => heartPoints[d])) : 0;
+
+  const slDates = Object.keys(sleep);
+  const slTotal = slDates.reduce((s,d) => s + sleep[d], 0);
+  const slAvg = slDates.length ? +(slTotal / slDates.length).toFixed(1) : 0;
+  const slBest = slDates.length ? Math.max(...slDates.map(d => sleep[d])) : 0;
+  const slBelow = slDates.filter(d => sleep[d] < sleepTarget).length;
+
+  document.getElementById('statsRow').innerHTML = `
+  <div class="stat-card"><div class="val">${sDates.length}</div><div class="lab">🚶 Days Logged</div></div>
+  <div class="stat-card"><div class="val">${sTotal.toLocaleString()}</div><div class="lab">🚶 Total Steps</div></div>
+  <div class="stat-card"><div class="val">${sAvg.toLocaleString()}</div><div class="lab">🚶 Avg / Day</div></div>
+  <div class="stat-card"><div class="val">${sBest.toLocaleString()}</div><div class="lab">🚶 Best Day</div></div>
+  <div class="stat-card"><div class="val" style="color:var(--heart);">${hDates.length}</div><div class="lab">❤️ Days Logged</div></div>
+  <div class="stat-card"><div class="val" style="color:var(--heart);">${hTotal.toLocaleString()}</div><div class="lab">❤️ Total Points</div></div>
+  <div class="stat-card"><div class="val" style="color:var(--heart);">${hAvg.toLocaleString()}</div><div class="lab">❤️ Avg / Day</div></div>
+  <div class="stat-card"><div class="val" style="color:var(--heart);">${hBest.toLocaleString()}</div><div class="lab">❤️ Best Day</div></div>
+  <div class="stat-card"><div class="val" style="color:var(--sleep);">${slDates.length}</div><div class="lab">🌙 Nights Logged</div></div>
+  <div class="stat-card"><div class="val" style="color:var(--sleep);">${slAvg}h</div><div class="lab">🌙 Avg / Night</div></div>
+  <div class="stat-card"><div class="val" style="color:var(--sleep);">${slBest}h</div><div class="lab">🌙 Best Night</div></div>
+  <div class="stat-card"><div class="val" style="color:var(--sleep);">${slBelow}</div><div class="lab">🌙 Below Target</div></div>
+  `;
+}
+
+let stepsChartInstance = null;
+let hpChartInstance = null;
+let sleepChartInstance = null;
+function renderChart() {
+  const dates = Object.keys(steps).sort();
+  if (stepsChartInstance) { stepsChartInstance.destroy(); stepsChartInstance = null; }
+  if (dates.length) {
+  stepsChartInstance = new Chart(document.getElementById('stepsChart'), {
+  type: 'bar',
+  data: { labels: dates, datasets: [{ label: 'Steps', data: dates.map(d => steps[d]),
+  backgroundColor: 'rgba(255,183,77,0.6)', borderColor: '#ffb74d', borderWidth:1, borderRadius:6 }] },
+  options: { responsive:true, maintainAspectRatio:false,
+  plugins: { legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>`${ctx.raw.toLocaleString()} steps` } } },
+  scales:{x:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}},y:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}}}
+  }
+  });
+  }
+
+  const hDates = Object.keys(heartPoints).sort();
+  if (hpChartInstance) { hpChartInstance.destroy(); hpChartInstance = null; }
+  if (hDates.length) {
+  hpChartInstance = new Chart(document.getElementById('hpChart'), {
+  type: 'bar',
+  data: { labels: hDates, datasets: [{ label: 'Heart Points', data: hDates.map(d => heartPoints[d]),
+  backgroundColor: 'rgba(255,107,157,0.6)', borderColor: '#ff6b9d', borderWidth:1, borderRadius:6 }] },
+  options: { responsive:true, maintainAspectRatio:false,
+  plugins: { legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>`${ctx.raw.toLocaleString()} heart points` } } },
+  scales:{x:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}},y:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}}}
+  }
+  });
+  }
+
+  const slDates = Object.keys(sleep).sort();
+  if (sleepChartInstance) { sleepChartInstance.destroy(); sleepChartInstance = null; }
+  if (slDates.length) {
+  sleepChartInstance = new Chart(document.getElementById('sleepChart'), {
+  type: 'line',
+  data: { labels: slDates, datasets: [
+  { label: 'Sleep (hrs)', data: slDates.map(d => sleep[d]),
+  borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,0.15)', pointBackgroundColor: '#818cf8',
+  tension: 0.3, pointRadius: 4, fill: true, spanGaps: true },
+  { label: `Target (${sleepTarget}h)`, data: slDates.map(() => sleepTarget),
+  borderColor: '#ffb74d', borderWidth: 2, borderDash: [6,4], pointRadius: 0, fill: false, tension: 0 }
+  ] },
+  options: { responsive:true, maintainAspectRatio:false,
+  plugins: { legend: { display:true, labels:{ color:'#9999aa', boxWidth:12 } },
+  tooltip:{ callbacks:{ label:ctx=> ctx.datasetIndex===0 ? `${ctx.raw}h sleep` : `Target: ${ctx.raw}h` } } },
+  scales:{x:{ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}},y:{beginAtZero:true,ticks:{color:'#9999aa'},grid:{color:'#2e2e44'}}}
+  }
+  });
+  }
+}
+
+function renderAll() { renderStats(); renderStepsLog(); renderHPLog(); renderSleepLog(); renderChart(); }
+
+// ==== Backup / Restore ====
+function exportBackup() {
+  if (!Object.keys(steps).length && !Object.keys(heartPoints).length && !Object.keys(sleep).length) return showToast('No data to back up yet', 'warn');
+  const backup = { app: 'ventus3-daily-activity', version: 1, exportedAt: new Date().toISOString(), steps, heartPoints, sleep, sleepTarget };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `activity_backup_${new Date().toLocaleDateString('en-CA')}.json`;
+  a.click();
+}
+
+async function importBackup(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  try {
+  const parsed = JSON.parse(await file.text());
+  const incomingSteps = parsed.steps && typeof parsed.steps === 'object' ? parsed.steps : {};
+  const incomingHP = parsed.heartPoints && typeof parsed.heartPoints === 'object' ? parsed.heartPoints : {};
+  const incomingSleep = parsed.sleep && typeof parsed.sleep === 'object' ? parsed.sleep : {};
+  if (!Object.keys(incomingSteps).length && !Object.keys(incomingHP).length && !Object.keys(incomingSleep).length) {
+  return showToast("That file doesn't look like a backup from this app", 'err');
+  }
+  const merge = confirm(
+  `This backup has ${Object.keys(incomingSteps).length} day(s) of steps, ${Object.keys(incomingHP).length} day(s) of heart points, and ${Object.keys(incomingSleep).length} night(s) of sleep.\n\n` +
+  `Click OK to MERGE with your current data (recommended), or Cancel then choose "Replace all" if you'd rather start fresh from this file.`
+  );
+  if (merge) {
+  let addedSteps = 0, addedHP = 0, addedSleep = 0;
+  Object.keys(incomingSteps).forEach(d => { if (!(d in steps)) { steps[d] = incomingSteps[d]; addedSteps++; } });
+  Object.keys(incomingHP).forEach(d => { if (!(d in heartPoints)) { heartPoints[d] = incomingHP[d]; addedHP++; } });
+  Object.keys(incomingSleep).forEach(d => { if (!(d in sleep)) { sleep[d] = incomingSleep[d]; addedSleep++; } });
+  persistSteps(); persistHP(); persistSleep();
+  showToast(`Merged: added ${addedSteps} step day(s), ${addedHP} heart points day(s), ${addedSleep} sleep night(s)`, 'ok');
+  } else {
+  if (!confirm('Replace ALL current data with this backup? This cannot be undone.')) return;
+  steps = incomingSteps;
+  heartPoints = incomingHP;
+  sleep = incomingSleep;
+  if (typeof parsed.sleepTarget === 'number' && parsed.sleepTarget > 0) sleepTarget = parsed.sleepTarget;
+  persistSteps(); persistHP(); persistSleep(); persistSleepTarget();
+  showToast('Backup restored', 'ok');
+  }
+  document.getElementById('sleepTarget').value = sleepTarget;
+  renderAll();
+  } catch (err) {
+  console.error('Backup restore failed:', err);
+  showToast("Couldn't read that file — is it a valid backup JSON?", 'err');
+  }
+}
+
+function clearAllData() {
+  if (!confirm('⚠️ Delete ALL logged steps, heart points, AND sleep? Cannot undo!')) return;
+  steps = {};
+  heartPoints = {};
+  sleep = {};
+  localStorage.removeItem(STEPS_KEY);
+  localStorage.removeItem(HP_KEY);
+  localStorage.removeItem(SLEEP_KEY);
+  renderAll();
+}
+
+// ==== Init ====
+document.addEventListener('DOMContentLoaded', () => {
+  loadSteps();
+  loadHP();
+  loadSleep();
+  loadSleepTarget();
+  const today = new Date().toLocaleDateString('en-CA');
+  document.getElementById('stepsDate').value = today;
+  document.getElementById('hpDate').value = today;
+  document.getElementById('sleepDate').value = today;
+  document.getElementById('sleepTarget').value = sleepTarget;
+  renderAll();
+});
+</script>
+</body>
+</html>
