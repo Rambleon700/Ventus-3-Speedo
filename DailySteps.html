@@ -3,171 +3,144 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Activity Log – Steps · Heart Points · Sleep</title>
+<title>Daily Activity Log – Steps · Energy · HP · Sleep</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg: #12121f;
-  --card: #1e1e2f;
-  --accent: #00d4aa;
-  --accent4: #ffb74d;
-  --heart: #ff6b9d;
-  --sleep: #818cf8;
-  --text: #e6e6f2;
-  --muted: #9999aa;
-  --danger: #ff5c7c;
-  --border: #2e2e44;
-  --ok: #00d4aa;
+  --bg:#12121f; --card:#1e1e2f; --accent:#00d4aa; --accent4:#ffb74d;
+  --cals:#fb923c; --intake:#a3e635; --heart:#ff6b9d; --sleep:#818cf8;
+  --text:#e6e6f2; --muted:#9999aa; --danger:#ff5c7c; --border:#2e2e44;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-body { background: var(--bg); color: var(--text); padding: 16px; max-width: 980px; margin: 0 auto; line-height: 1.4; }
-h1 { text-align: center; margin-bottom: 4px; color: var(--accent4); font-size: 1.6rem; }
-.subtitle { text-align: center; color: var(--muted); margin-bottom: 18px; font-size: 0.9rem; }
-.back-link { display: block; text-align: center; margin-bottom: 16px; }
-.back-link a { color: var(--accent); text-decoration: none; font-size: 14px; }
-.back-link a:hover { text-decoration: underline; }
-
-button {
-  background: linear-gradient(135deg, var(--accent4), #e0952f);
-  border: none; color: #14140f; padding: 10px 16px; border-radius: 8px;
-  cursor: pointer; font-size: 14px; font-weight: 600; transition: transform 0.1s;
-}
-button:hover { transform: translateY(-1px); }
-button:active { transform: translateY(0); }
-button.secondary { background: var(--card); border: 1px solid var(--muted); color: var(--text); font-weight: 400; }
-button.heart { background: linear-gradient(135deg, var(--heart), #e0407a); color: #fff; }
-button.sleep { background: linear-gradient(135deg, var(--sleep), #5b5fc7); color: #fff; }
-button.danger { background: linear-gradient(135deg, var(--danger), #e04060); color: #fff; }
-button.small { padding: 6px 11px; font-size: 13px; }
-button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-button.ghost:hover { border-color: var(--accent4); color: var(--text); }
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
-  margin-bottom: 22px;
-}
-.stat-card {
-  background: var(--card); padding: 12px 8px; border-radius: 10px; text-align: center;
-}
-.stat-card .val { font-size: 1.25rem; font-weight: 700; color: var(--accent4); }
-.stat-card .lab { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
-
-.section {
-  background: var(--card); border-radius: 12px; padding: 18px; margin-bottom: 20px;
-}
-.section h2 { margin-bottom: 12px; font-size: 1.15rem; }
-.input-row {
-  display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;
-}
-.input-row input[type="date"],
-.input-row input[type="number"] {
-  background: var(--bg); border: 1px solid var(--muted); color: var(--text);
-  padding: 9px 11px; border-radius: 6px; font-size: 14px; min-height: 40px;
-}
-.input-row input[type="number"] { width: 110px; }
-.quick-dates { display: flex; gap: 6px; flex-wrap: wrap; }
-.goal-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
-.goal-row input { width: 70px; background: var(--bg); border: 1px solid var(--muted); color: var(--text); padding: 6px 8px; border-radius: 6px; }
-
-.filter-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
-.filter-row input[type="text"] {
-  background: var(--bg); border: 1px solid var(--muted); color: var(--text);
-  padding: 8px 10px; border-radius: 6px; font-size: 13px; flex: 1; min-width: 140px;
-}
-
-.table-wrap { overflow-x: auto; max-height: 280px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border); }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
-th { background: #252538; position: sticky; top: 0; color: var(--muted); font-weight: 600; z-index: 1; }
-td.num { font-weight: 600; }
-td.actions { white-space: nowrap; }
-td.actions button { margin-right: 4px; }
-
-.chart-card { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-.chart-card h3 {
-  margin-bottom: 8px; color: var(--accent4); font-size: 15px;
-  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
-}
-.chart-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
-.chart-controls select {
-  background: var(--bg); border: 1px solid var(--muted); color: var(--text);
-  padding: 5px 8px; border-radius: 6px; font-size: 13px;
-}
-.chart-controls label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
-.chart-container { position: relative; height: 270px; }
-.empty { text-align: center; color: var(--muted); padding: 24px 12px; font-size: 14px; }
-
-.controls { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
-
-#toastContainer {
-  position: fixed; bottom: 20px; right: 20px; z-index: 1000;
-  display: flex; flex-direction: column; gap: 10px; max-width: 340px;
-}
-.toast {
-  background: var(--card); border-left: 4px solid var(--accent4); color: var(--text);
-  padding: 12px 16px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-  font-size: 14px; animation: toastIn 0.25s ease;
-}
-.toast.warn { border-left-color: #ffb74d; }
-.toast.err { border-left-color: var(--danger); }
-@keyframes toastIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
-
-.edit-badge {
-  display: inline-block; background: var(--accent4); color: #14140f;
-  font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; margin-left: 6px;
-}
-@media (max-width: 600px) {
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
-  .input-row input[type="number"] { width: 100px; }
-}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif}
+body{background:var(--bg);color:var(--text);padding:16px;max-width:980px;margin:0 auto;line-height:1.4}
+h1{text-align:center;margin-bottom:4px;color:var(--accent4);font-size:1.5rem}
+.subtitle{text-align:center;color:var(--muted);margin-bottom:16px;font-size:.9rem}
+.back-link{display:block;text-align:center;margin-bottom:14px}
+.back-link a{color:var(--accent);text-decoration:none;font-size:14px}
+.back-link a:hover{text-decoration:underline}
+button{background:linear-gradient(135deg,var(--accent4),#e0952f);border:none;color:#14140f;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+button:hover{filter:brightness(1.05)}
+button.secondary{background:var(--card);border:1px solid var(--muted);color:var(--text);font-weight:400}
+button.cals{background:linear-gradient(135deg,var(--cals),#ea580c);color:#fff}
+button.heart{background:linear-gradient(135deg,var(--heart),#e0407a);color:#fff}
+button.sleep{background:linear-gradient(135deg,var(--sleep),#5b5fc7);color:#fff}
+button.danger{background:linear-gradient(135deg,var(--danger),#e04060);color:#fff}
+button.small{padding:6px 11px;font-size:13px}
+button.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+button.ghost:hover{border-color:var(--accent4);color:var(--text)}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:8px;margin-bottom:18px}
+.stat-card{background:var(--card);padding:10px 6px;border-radius:10px;text-align:center}
+.stat-card .val{font-size:1.12rem;font-weight:700;color:var(--accent4)}
+.stat-card .lab{font-size:9px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.03em}
+.section{background:var(--card);border-radius:12px;padding:16px;margin-bottom:18px}
+.section h2{margin-bottom:10px;font-size:1.12rem}
+.input-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.input-row input[type=date],.input-row input[type=number],.bmr-grid input,.bmr-grid select,.goal-row input{
+  background:var(--bg);border:1px solid var(--muted);color:var(--text);padding:8px 10px;border-radius:6px;font-size:14px;min-height:38px}
+.input-row input[type=number]{width:110px}
+.goal-row input{width:72px;min-height:32px;padding:6px 8px}
+.quick-dates{display:flex;gap:6px;flex-wrap:wrap}
+.goal-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:8px;flex-wrap:wrap}
+.formula{background:#252538;border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+.formula strong{color:var(--accent)}
+.bmr-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px}
+.bmr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:10px 0}
+.bmr-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.bmr-out{font-size:14px;line-height:1.65;margin-top:10px}
+.note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45}
+.filter-row{margin-bottom:8px}
+.filter-row input{width:100%;background:var(--bg);border:1px solid var(--muted);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px}
+.table-wrap{overflow:auto;max-height:260px;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--border)}
+th{background:#252538;position:sticky;top:0;color:var(--muted);z-index:1;font-weight:600}
+td.num{font-weight:600}
+td.actions{white-space:nowrap}
+td.actions button{margin-right:4px}
+.net-pos{color:var(--accent)}.net-neg{color:var(--danger)}
+.chart-card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:18px}
+.chart-card h3{margin-bottom:8px;color:var(--accent4);font-size:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.chart-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.chart-controls select{background:var(--bg);border:1px solid var(--muted);color:var(--text);padding:5px 8px;border-radius:6px}
+.chart-controls label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.chart-container{position:relative;height:250px}
+.empty{text-align:center;color:var(--muted);padding:20px;font-size:14px}
+.controls{display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+#toastContainer{position:fixed;bottom:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:10px;max-width:340px}
+.toast{background:var(--card);border-left:4px solid var(--accent4);color:var(--text);padding:12px 16px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:14px}
+.toast.warn{border-left-color:#ffb74d}.toast.err{border-left-color:var(--danger)}
+.edit-badge{display:inline-block;background:var(--accent4);color:#14140f;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:6px}
+@media(max-width:600px){.stats-row{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
 <div class="back-link"><a href="JTGStrava.html">← Back to Rowing Log</a></div>
 <h1>📋 Daily Activity Log</h1>
-<p class="subtitle">Steps · Heart Points · Sleep — goals, streaks, rolling averages, editable history</p>
+<p class="subtitle">Steps · Energy (BMR / active / intake / net) · Heart Points · Sleep</p>
 
 <div id="toastContainer"></div>
 <div class="stats-row" id="statsRow"></div>
 
-<!-- ========== STEPS ========== -->
+<!-- BMR / RMR -->
+<div class="section">
+  <h2>🧬 Basal Metabolic Rate &amp; energy model</h2>
+  <div class="formula">
+    <strong>Expenditure</strong> = BMR + active kcal &nbsp;·&nbsp;
+    <strong>Net burned</strong> = expenditure − intake
+    <span style="opacity:.85"> (positive = deficit)</span>
+  </div>
+  <div class="bmr-box">
+    <div class="goal-row">
+      Active BMR/RMR:
+      <input type="number" id="rmrInput" min="0" step="10" value="1600" aria-label="BMR kcal">
+      kcal/day
+      <button type="button" class="ghost small" onclick="saveRMR()">Save</button>
+    </div>
+    <details open>
+      <summary>Calculate BMR</summary>
+      <div class="bmr-grid">
+        <label>Sex
+          <select id="bmrSex"><option value="male">Male</option><option value="female">Female</option></select>
+        </label>
+        <label>Age (years)<input type="number" id="bmrAge" min="15" max="100" placeholder="e.g. 40"></label>
+        <label>Weight (kg)<input type="number" id="bmrWeight" min="30" max="250" step="0.1" placeholder="e.g. 75"></label>
+        <label>Height (cm)<input type="number" id="bmrHeight" min="120" max="230" step="1" placeholder="e.g. 178"></label>
+        <label>Body fat % (optional)<input type="number" id="bmrBf" min="3" max="60" step="0.1" placeholder="e.g. 18"></label>
+      </div>
+      <button type="button" class="secondary small" onclick="calcBMR()">Calculate</button>
+      <button type="button" class="ghost small" onclick="applyMifflinAsRMR()">Use Mifflin as BMR</button>
+      <div class="bmr-out" id="bmrOut"></div>
+    </details>
+    <p class="note">Log <strong>active</strong> kcal from your watch (not total). Log <strong>intake</strong> from food. Estimates only — not medical advice.</p>
+  </div>
+</div>
+
+<!-- STEPS -->
 <div class="section">
   <h2>🚶 Steps</h2>
   <div class="input-row">
     <input type="date" id="stepsDate" aria-label="Steps date">
-    <input type="number" id="stepsCount" min="0" step="1" placeholder="e.g. 8500" aria-label="Step count">
+    <input type="number" id="stepsCount" min="0" step="1" placeholder="e.g. 8500" aria-label="Steps">
     <div class="quick-dates">
       <button type="button" class="ghost small" onclick="setDate('steps',0)">Today</button>
       <button type="button" class="ghost small" onclick="setDate('steps',-1)">Yesterday</button>
     </div>
-    <button id="stepsSaveBtn" onclick="saveSteps()">💾 Save Steps</button>
+    <button id="stepsSaveBtn" onclick="saveMetric('steps')">💾 Save Steps</button>
   </div>
-  <div class="goal-row">
-    Goal: <input type="number" id="stepsGoal" min="0" step="100" value="8000" aria-label="Steps goal"> steps/day
-  </div>
-  <div class="filter-row">
-    <input type="text" id="stepsFilter" placeholder="Filter dates or values…" oninput="renderStepsTable()" aria-label="Filter steps">
-  </div>
+  <div class="goal-row">Goal: <input type="number" id="stepsGoal" min="0" step="100" value="8000"> steps/day</div>
+  <div class="filter-row"><input type="text" id="stepsFilter" placeholder="Filter…" oninput="renderMetricTable('steps')"></div>
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Date</th><th>Steps</th><th>vs Goal</th><th>Actions</th></tr></thead>
-      <tbody id="stepsTableBody"></tbody>
-    </table>
+    <table><thead><tr><th>Date</th><th>Steps</th><th>vs Goal</th><th>Actions</th></tr></thead>
+    <tbody id="stepsTableBody"></tbody></table>
   </div>
 </div>
-
 <div class="chart-card">
-  <h3>
-    📊 Steps Over Time
+  <h3>📊 Steps
     <span class="chart-controls">
-      <select id="stepsRange" onchange="renderCharts()" aria-label="Steps chart range">
-        <option value="7">Last 7 days</option>
-        <option value="30" selected>Last 30 days</option>
-        <option value="90">Last 90 days</option>
-        <option value="all">All time</option>
+      <select id="stepsRange" onchange="renderCharts()" aria-label="Steps range">
+        <option value="7">7d</option><option value="30" selected>30d</option><option value="90">90d</option><option value="all">All</option>
       </select>
       <label><input type="checkbox" id="stepsShowRoll" checked onchange="renderCharts()"> 7d avg</label>
       <label><input type="checkbox" id="stepsShowGoal" checked onchange="renderCharts()"> Goal</label>
@@ -176,41 +149,72 @@ td.actions button { margin-right: 4px; }
   <div class="chart-container"><canvas id="stepsChart"></canvas></div>
 </div>
 
-<!-- ========== HEART POINTS ========== -->
+<!-- ENERGY -->
+<div class="section">
+  <h2>🔥 Calories &amp; net balance</h2>
+  <div class="input-row">
+    <input type="date" id="calsDate" aria-label="Energy date">
+    <input type="number" id="calsCount" min="0" step="1" placeholder="Active kcal" aria-label="Active kcal">
+    <input type="number" id="intakeCount" min="0" step="1" placeholder="Intake kcal" aria-label="Intake kcal">
+    <div class="quick-dates">
+      <button type="button" class="ghost small" onclick="setDate('cals',0)">Today</button>
+      <button type="button" class="ghost small" onclick="setDate('cals',-1)">Yesterday</button>
+    </div>
+    <button class="cals" id="calsSaveBtn" onclick="saveEnergy()">💾 Save energy day</button>
+  </div>
+  <div class="goal-row">
+    Active goal: <input type="number" id="calsGoal" min="0" step="50" value="500"> kcal
+    · Deficit goal (net): <input type="number" id="netGoal" min="0" step="50" value="300"> kcal
+  </div>
+  <div class="filter-row"><input type="text" id="calsFilter" placeholder="Filter…" oninput="renderEnergyTable()"></div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Active</th><th>BMR</th><th>Expenditure</th><th>Intake</th><th>Net burned</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="calsTableBody"></tbody>
+    </table>
+  </div>
+</div>
+<div class="chart-card">
+  <h3>📊 Energy
+    <span class="chart-controls">
+      <select id="calsRange" onchange="renderCharts()">
+        <option value="7">7d</option><option value="30" selected>30d</option><option value="90">90d</option><option value="all">All</option>
+      </select>
+      <label><input type="checkbox" id="calsShowActive" checked onchange="renderCharts()"> Active</label>
+      <label><input type="checkbox" id="calsShowExp" checked onchange="renderCharts()"> Expenditure</label>
+      <label><input type="checkbox" id="calsShowIntake" checked onchange="renderCharts()"> Intake</label>
+      <label><input type="checkbox" id="calsShowNet" checked onchange="renderCharts()"> Net</label>
+    </span>
+  </h3>
+  <div class="chart-container"><canvas id="calsChart"></canvas></div>
+</div>
+
+<!-- HEART POINTS -->
 <div class="section">
   <h2>❤️ Heart Points</h2>
   <div class="input-row">
-    <input type="date" id="hpDate" aria-label="Heart points date">
-    <input type="number" id="hpCount" min="0" step="1" placeholder="e.g. 45" aria-label="Heart points">
+    <input type="date" id="hpDate">
+    <input type="number" id="hpCount" min="0" step="1" placeholder="e.g. 45">
     <div class="quick-dates">
       <button type="button" class="ghost small" onclick="setDate('hp',0)">Today</button>
       <button type="button" class="ghost small" onclick="setDate('hp',-1)">Yesterday</button>
     </div>
-    <button class="heart" id="hpSaveBtn" onclick="saveHP()">💾 Save Heart Points</button>
+    <button class="heart" id="hpSaveBtn" onclick="saveMetric('hp')">💾 Save Heart Points</button>
   </div>
-  <div class="goal-row">
-    Goal: <input type="number" id="hpGoal" min="0" step="1" value="30" aria-label="Heart points goal"> points/day
-  </div>
-  <div class="filter-row">
-    <input type="text" id="hpFilter" placeholder="Filter dates or values…" oninput="renderHPTable()" aria-label="Filter heart points">
-  </div>
+  <div class="goal-row">Goal: <input type="number" id="hpGoal" min="0" step="1" value="30"> points/day</div>
+  <div class="filter-row"><input type="text" id="hpFilter" placeholder="Filter…" oninput="renderMetricTable('hp')"></div>
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Date</th><th>Points</th><th>vs Goal</th><th>Actions</th></tr></thead>
-      <tbody id="hpTableBody"></tbody>
-    </table>
+    <table><thead><tr><th>Date</th><th>Points</th><th>vs Goal</th><th>Actions</th></tr></thead>
+    <tbody id="hpTableBody"></tbody></table>
   </div>
 </div>
-
 <div class="chart-card">
-  <h3>
-    📊 Heart Points Over Time
+  <h3>📊 Heart Points
     <span class="chart-controls">
-      <select id="hpRange" onchange="renderCharts()" aria-label="Heart points chart range">
-        <option value="7">Last 7 days</option>
-        <option value="30" selected>Last 30 days</option>
-        <option value="90">Last 90 days</option>
-        <option value="all">All time</option>
+      <select id="hpRange" onchange="renderCharts()">
+        <option value="7">7d</option><option value="30" selected>30d</option><option value="90">90d</option><option value="all">All</option>
       </select>
       <label><input type="checkbox" id="hpShowRoll" checked onchange="renderCharts()"> 7d avg</label>
       <label><input type="checkbox" id="hpShowGoal" checked onchange="renderCharts()"> Goal</label>
@@ -219,41 +223,30 @@ td.actions button { margin-right: 4px; }
   <div class="chart-container"><canvas id="hpChart"></canvas></div>
 </div>
 
-<!-- ========== SLEEP ========== -->
+<!-- SLEEP -->
 <div class="section">
   <h2>🌙 Sleep</h2>
   <div class="input-row">
-    <input type="date" id="sleepDate" aria-label="Sleep date">
-    <input type="number" id="sleepHours" min="0" max="24" step="0.25" placeholder="e.g. 7.5" aria-label="Sleep hours">
+    <input type="date" id="sleepDate">
+    <input type="number" id="sleepHours" min="0" max="24" step="0.25" placeholder="e.g. 7.5">
     <div class="quick-dates">
       <button type="button" class="ghost small" onclick="setDate('sleep',0)">Today</button>
       <button type="button" class="ghost small" onclick="setDate('sleep',-1)">Yesterday</button>
     </div>
-    <button class="sleep" id="sleepSaveBtn" onclick="saveSleep()">💾 Save Sleep</button>
+    <button class="sleep" id="sleepSaveBtn" onclick="saveMetric('sleep')">💾 Save Sleep</button>
   </div>
-  <div class="goal-row">
-    Target: <input type="number" id="sleepTarget" min="0" max="24" step="0.25" value="7" aria-label="Sleep target"> h
-  </div>
-  <div class="filter-row">
-    <input type="text" id="sleepFilter" placeholder="Filter dates or values…" oninput="renderSleepTable()" aria-label="Filter sleep">
-  </div>
+  <div class="goal-row">Target: <input type="number" id="sleepTarget" min="0" max="24" step="0.25" value="7"> h</div>
+  <div class="filter-row"><input type="text" id="sleepFilter" placeholder="Filter…" oninput="renderMetricTable('sleep')"></div>
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Date</th><th>Hours</th><th>vs Target</th><th>Actions</th></tr></thead>
-      <tbody id="sleepTableBody"></tbody>
-    </table>
+    <table><thead><tr><th>Date</th><th>Hours</th><th>vs Target</th><th>Actions</th></tr></thead>
+    <tbody id="sleepTableBody"></tbody></table>
   </div>
 </div>
-
 <div class="chart-card">
-  <h3>
-    📊 Sleep Over Time
+  <h3>📊 Sleep
     <span class="chart-controls">
-      <select id="sleepRange" onchange="renderCharts()" aria-label="Sleep chart range">
-        <option value="7">Last 7 days</option>
-        <option value="30" selected>Last 30 days</option>
-        <option value="90">Last 90 days</option>
-        <option value="all">All time</option>
+      <select id="sleepRange" onchange="renderCharts()">
+        <option value="7">7d</option><option value="30" selected>30d</option><option value="90">90d</option><option value="all">All</option>
       </select>
       <label><input type="checkbox" id="sleepShowRoll" checked onchange="renderCharts()"> 7d avg</label>
       <label><input type="checkbox" id="sleepShowGoal" checked onchange="renderCharts()"> Target</label>
@@ -271,767 +264,663 @@ td.actions button { margin-right: 4px; }
 </div>
 
 <script>
-// ==== Chart defaults (dark theme) ====
 Chart.defaults.color = '#9999aa';
 Chart.defaults.borderColor = '#2e2e44';
 Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
 Chart.defaults.plugins.legend.labels.boxWidth = 12;
-Chart.defaults.plugins.legend.labels.color = '#9999aa';
 
-// ==== Data ====
-let steps = {};
-let heartPoints = {};
-let sleep = {};
-let stepsGoal = 8000;
-let hpGoal = 30;
-let sleepTarget = 7;
+// ---- State ----
+let steps = {}, calories = {}, intake = {}, heartPoints = {}, sleep = {};
+let stepsGoal = 8000, calsGoal = 500, netGoal = 300, hpGoal = 30, sleepTarget = 7;
+let rmr = 1600;
+let bmrProfile = { sex: 'male', age: '', weight: '', height: '', bf: '' };
+let lastMifflin = null;
+const charts = {};
 
-const STEPS_KEY = 'ventus3_daily_steps';
-const HP_KEY = 'ventus3_heart_points';
-const SLEEP_KEY = 'ventus3_sleep_hours';
-const STEPS_GOAL_KEY = 'ventus3_steps_goal';
-const HP_GOAL_KEY = 'ventus3_hp_goal';
-const SLEEP_TARGET_KEY = 'ventus3_sleep_target';
+const META = {
+  steps: {
+    data: () => steps, dateId: 'stepsDate', valId: 'stepsCount', goalId: 'stepsGoal',
+    btnId: 'stepsSaveBtn', filterId: 'stepsFilter', bodyId: 'stepsTableBody',
+    rangeId: 'stepsRange', canvasId: 'stepsChart', rollId: 'stepsShowRoll', goalCbId: 'stepsShowGoal',
+    label: 'Steps', color: '#ffb74d', unit: 'steps', defGoal: 8000, saveLabel: 'Steps',
+    getGoal: () => stepsGoal, setGoal: v => { stepsGoal = v; },
+    parse: v => parseInt(v, 10), fmt: v => Number(v).toLocaleString(), isSleep: false,
+    barMiss: 'rgba(255,183,77,0.55)'
+  },
+  hp: {
+    data: () => heartPoints, dateId: 'hpDate', valId: 'hpCount', goalId: 'hpGoal',
+    btnId: 'hpSaveBtn', filterId: 'hpFilter', bodyId: 'hpTableBody',
+    rangeId: 'hpRange', canvasId: 'hpChart', rollId: 'hpShowRoll', goalCbId: 'hpShowGoal',
+    label: 'Heart Points', color: '#ff6b9d', unit: 'points', defGoal: 30, saveLabel: 'Heart Points',
+    getGoal: () => hpGoal, setGoal: v => { hpGoal = v; },
+    parse: v => parseInt(v, 10), fmt: v => String(v), isSleep: false,
+    barMiss: 'rgba(255,107,157,0.55)'
+  },
+  sleep: {
+    data: () => sleep, dateId: 'sleepDate', valId: 'sleepHours', goalId: 'sleepTarget',
+    btnId: 'sleepSaveBtn', filterId: 'sleepFilter', bodyId: 'sleepTableBody',
+    rangeId: 'sleepRange', canvasId: 'sleepChart', rollId: 'sleepShowRoll', goalCbId: 'sleepShowGoal',
+    label: 'Sleep', color: '#818cf8', unit: 'h', defGoal: 7, saveLabel: 'Sleep',
+    getGoal: () => sleepTarget, setGoal: v => { sleepTarget = v; },
+    parse: v => parseFloat(v), fmt: v => v + 'h', isSleep: true,
+    validate: v => !isNaN(v) && v >= 0 && v <= 24,
+    barMiss: 'rgba(129,140,248,0.55)'
+  }
+};
 
+// ---- Storage ----
 function persistAll() {
-  localStorage.setItem(STEPS_KEY, JSON.stringify(steps));
-  localStorage.setItem(HP_KEY, JSON.stringify(heartPoints));
-  localStorage.setItem(SLEEP_KEY, JSON.stringify(sleep));
-  localStorage.setItem(STEPS_GOAL_KEY, String(stepsGoal));
-  localStorage.setItem(HP_GOAL_KEY, String(hpGoal));
-  localStorage.setItem(SLEEP_TARGET_KEY, String(sleepTarget));
+  localStorage.setItem('ventus3_daily_steps', JSON.stringify(steps));
+  localStorage.setItem('ventus3_calories', JSON.stringify(calories));
+  localStorage.setItem('ventus3_intake', JSON.stringify(intake));
+  localStorage.setItem('ventus3_heart_points', JSON.stringify(heartPoints));
+  localStorage.setItem('ventus3_sleep_hours', JSON.stringify(sleep));
+  localStorage.setItem('ventus3_steps_goal', String(stepsGoal));
+  localStorage.setItem('ventus3_cals_goal', String(calsGoal));
+  localStorage.setItem('ventus3_net_goal', String(netGoal));
+  localStorage.setItem('ventus3_hp_goal', String(hpGoal));
+  localStorage.setItem('ventus3_sleep_target', String(sleepTarget));
+  localStorage.setItem('ventus3_rmr', String(rmr));
+  localStorage.setItem('ventus3_bmr_profile', JSON.stringify(bmrProfile));
 }
 function loadAll() {
   try {
-    const s = localStorage.getItem(STEPS_KEY); if (s) steps = JSON.parse(s) || {};
-    const h = localStorage.getItem(HP_KEY); if (h) heartPoints = JSON.parse(h) || {};
-    const sl = localStorage.getItem(SLEEP_KEY); if (sl) sleep = JSON.parse(sl) || {};
-    const sg = localStorage.getItem(STEPS_GOAL_KEY); if (sg !== null) stepsGoal = parseFloat(sg) || 8000;
-    const hg = localStorage.getItem(HP_GOAL_KEY); if (hg !== null) hpGoal = parseFloat(hg) || 30;
-    const st = localStorage.getItem(SLEEP_TARGET_KEY); if (st !== null) sleepTarget = parseFloat(st) || 7;
+    const j = k => { const s = localStorage.getItem(k); return s ? JSON.parse(s) : null; };
+    const n = k => { const s = localStorage.getItem(k); return s !== null ? parseFloat(s) : null; };
+    if (j('ventus3_daily_steps')) steps = j('ventus3_daily_steps') || {};
+    if (j('ventus3_calories')) calories = j('ventus3_calories') || {};
+    if (j('ventus3_intake')) intake = j('ventus3_intake') || {};
+    if (j('ventus3_heart_points')) heartPoints = j('ventus3_heart_points') || {};
+    if (j('ventus3_sleep_hours')) sleep = j('ventus3_sleep_hours') || {};
+    if (n('ventus3_steps_goal') != null) stepsGoal = n('ventus3_steps_goal') || 8000;
+    if (n('ventus3_cals_goal') != null) calsGoal = n('ventus3_cals_goal') || 500;
+    if (n('ventus3_net_goal') != null) netGoal = n('ventus3_net_goal') || 300;
+    if (n('ventus3_hp_goal') != null) hpGoal = n('ventus3_hp_goal') || 30;
+    if (n('ventus3_sleep_target') != null) sleepTarget = n('ventus3_sleep_target') || 7;
+    if (n('ventus3_rmr') != null) rmr = n('ventus3_rmr') || 1600;
+    const bp = j('ventus3_bmr_profile'); if (bp) bmrProfile = { ...bmrProfile, ...bp };
   } catch (e) { console.error(e); }
 }
 
-// ==== Helpers ====
+// ---- Helpers ----
 function todayStr(offset = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
+  const d = new Date(); d.setDate(d.getDate() + offset);
   return d.toLocaleDateString('en-CA');
 }
-function setDate(which, offset) {
-  const id = which === 'steps' ? 'stepsDate' : which === 'hp' ? 'hpDate' : 'sleepDate';
-  document.getElementById(id).value = todayStr(offset);
-  prefill(which);
-}
-function showToast(msg, kind = 'ok') {
-  const c = document.getElementById('toastContainer');
+function showToast(msg, kind = '') {
   const el = document.createElement('div');
-  el.className = `toast ${kind === 'warn' ? 'warn' : kind === 'err' ? 'err' : ''}`.trim();
+  el.className = 'toast ' + (kind || '');
   el.textContent = msg;
-  c.appendChild(el);
+  document.getElementById('toastContainer').appendChild(el);
   setTimeout(() => el.remove(), 4500);
 }
-function sortedDates(obj) {
-  return Object.keys(obj).sort().reverse();
+function expenditure(active) { return Math.round((Number(active) || 0) + (Number(rmr) || 0)); }
+/** Net calories burned = (BMR + active) − intake. Positive = deficit. */
+function netBurned(date) {
+  if (!(date in calories) || !(date in intake)) return null;
+  return expenditure(calories[date]) - Number(intake[date]);
 }
-function filterDates(obj, query) {
-  const q = (query || '').trim().toLowerCase();
-  let dates = sortedDates(obj);
-  if (!q) return dates;
-  return dates.filter(d => d.includes(q) || String(obj[d]).includes(q));
-}
-
-/** Mean of logged values in the last `days` calendar days (ending today). */
 function rollingAvg(obj, days) {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - (days - 1));
-  const cutStr = cutoff.toLocaleDateString('en-CA');
-  const vals = Object.keys(obj).filter(d => d >= cutStr).map(d => obj[d]);
-  if (!vals.length) return 0;
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - (days - 1));
+  const cut = cutoff.toLocaleDateString('en-CA');
+  const vals = Object.keys(obj).filter(d => d >= cut).map(d => obj[d]);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
 }
-
-/**
- * Trailing calendar-window average for each date in `dates` (ascending).
- * For day D: mean of logged values in [D-(window-1) … D].
- */
 function rollingAvgSeries(obj, dates, window = 7) {
   return dates.map(d => {
     const end = new Date(d + 'T12:00:00');
-    const start = new Date(end);
-    start.setDate(start.getDate() - (window - 1));
-    const startStr = start.toLocaleDateString('en-CA');
-    const vals = Object.keys(obj)
-      .filter(k => k >= startStr && k <= d)
-      .map(k => obj[k]);
-    if (!vals.length) return null;
-    return vals.reduce((a, b) => a + b, 0) / vals.length;
+    const start = new Date(end); start.setDate(start.getDate() - (window - 1));
+    const a = start.toLocaleDateString('en-CA');
+    const vals = Object.keys(obj).filter(k => k >= a && k <= d).map(k => obj[k]);
+    return vals.length ? vals.reduce((x, y) => x + y, 0) / vals.length : null;
   });
 }
-
 function calcStreak(obj, goal) {
   let current = 0, longest = 0, run = 0;
-  const allSorted = Object.keys(obj).sort();
-  for (let i = 0; i < allSorted.length; i++) {
-    if (obj[allSorted[i]] >= goal) {
-      run++;
-      longest = Math.max(longest, run);
-    } else run = 0;
-  }
-  current = 0;
+  Object.keys(obj).sort().forEach(d => {
+    if (obj[d] >= goal) { run++; longest = Math.max(longest, run); } else run = 0;
+  });
   let check = new Date();
   for (let i = 0; i < 400; i++) {
     const ds = check.toLocaleDateString('en-CA');
-    if (!(ds in obj)) {
-      if (i === 0) { check.setDate(check.getDate() - 1); continue; }
-      break;
-    }
-    if (obj[ds] >= goal) current++;
-    else break;
+    if (!(ds in obj)) { if (i === 0) { check.setDate(check.getDate() - 1); continue; } break; }
+    if (obj[ds] >= goal) current++; else break;
     check.setDate(check.getDate() - 1);
   }
   return { current, longest };
 }
-
 function getRangeDates(obj, rangeVal) {
   const all = Object.keys(obj).sort();
   if (rangeVal === 'all' || !all.length) return all;
-  const days = parseInt(rangeVal, 10);
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutStr = cutoff.toLocaleDateString('en-CA');
-  return all.filter(d => d >= cutStr);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - parseInt(rangeVal, 10));
+  return all.filter(d => d >= cutoff.toLocaleDateString('en-CA'));
+}
+function filterDates(obj, q) {
+  q = (q || '').trim().toLowerCase();
+  let dates = Object.keys(obj).sort().reverse();
+  if (!q) return dates;
+  return dates.filter(d => d.includes(q) || String(obj[d]).includes(q));
 }
 
-// ==== Prefill ====
-function prefill(which) {
-  if (which === 'steps') {
-    const d = document.getElementById('stepsDate').value;
-    const btn = document.getElementById('stepsSaveBtn');
-    if (d && d in steps) {
-      document.getElementById('stepsCount').value = steps[d];
-      btn.innerHTML = '✏️ Update Steps <span class="edit-badge">EDIT</span>';
-    } else {
-      document.getElementById('stepsCount').value = '';
-      btn.innerHTML = '💾 Save Steps';
-    }
-  } else if (which === 'hp') {
-    const d = document.getElementById('hpDate').value;
-    const btn = document.getElementById('hpSaveBtn');
-    if (d && d in heartPoints) {
-      document.getElementById('hpCount').value = heartPoints[d];
-      btn.innerHTML = '✏️ Update Heart Points <span class="edit-badge">EDIT</span>';
-    } else {
-      document.getElementById('hpCount').value = '';
-      btn.innerHTML = '💾 Save Heart Points';
-    }
+// ---- BMR ----
+function calcBMR() {
+  const sex = document.getElementById('bmrSex').value;
+  const age = parseFloat(document.getElementById('bmrAge').value);
+  const w = parseFloat(document.getElementById('bmrWeight').value);
+  const h = parseFloat(document.getElementById('bmrHeight').value);
+  const bf = parseFloat(document.getElementById('bmrBf').value);
+  const out = document.getElementById('bmrOut');
+  if ([age, w, h].some(x => isNaN(x) || x <= 0)) {
+    out.innerHTML = '<span style="color:var(--danger)">Enter age, weight (kg), and height (cm).</span>';
+    return null;
+  }
+  const mifflin = Math.round(10 * w + 6.25 * h - 5 * age + (sex === 'female' ? -161 : 5));
+  const harris = Math.round(sex === 'female'
+    ? 447.593 + 9.247 * w + 3.098 * h - 4.330 * age
+    : 88.362 + 13.397 * w + 4.799 * h - 5.677 * age);
+  let katchHtml = '', katch = null;
+  if (!isNaN(bf) && bf > 0 && bf < 70) {
+    const lbm = w * (1 - bf / 100);
+    katch = Math.round(370 + 21.6 * lbm);
+    katchHtml = `<div><strong style="color:var(--sleep)">Katch–McArdle:</strong> ${katch} kcal/day <span style="color:var(--muted)">(LBM ${lbm.toFixed(1)} kg)</span></div>`;
+  }
+  lastMifflin = mifflin;
+  bmrProfile = { sex, age, weight: w, height: h, bf: isNaN(bf) ? '' : bf };
+  out.innerHTML = `
+    <div><strong style="color:var(--accent)">Mifflin–St Jeor:</strong> ${mifflin} kcal/day <span style="color:var(--muted)">(recommended)</span></div>
+    <div><strong style="color:var(--accent4)">Harris–Benedict:</strong> ${harris} kcal/day</div>
+    ${katchHtml}`;
+  return { mifflin, harris, katch };
+}
+function applyMifflinAsRMR() {
+  const r = calcBMR();
+  if (!r) return;
+  rmr = r.mifflin;
+  document.getElementById('rmrInput').value = rmr;
+  persistAll();
+  renderAll();
+  showToast('BMR set to ' + rmr + ' kcal/day (Mifflin–St Jeor)');
+}
+function saveRMR() {
+  const v = parseFloat(document.getElementById('rmrInput').value);
+  if (isNaN(v) || v < 0) return showToast('Invalid BMR', 'warn');
+  rmr = Math.round(v);
+  persistAll();
+  renderAll();
+  showToast('BMR/RMR = ' + rmr + ' kcal/day');
+}
+
+// ---- Prefill / dates ----
+function setDate(which, offset) {
+  if (which === 'cals') {
+    document.getElementById('calsDate').value = todayStr(offset);
+    prefillEnergy();
+    return;
+  }
+  const m = META[which];
+  document.getElementById(m.dateId).value = todayStr(offset);
+  prefillMetric(which);
+}
+function prefillMetric(which) {
+  const m = META[which];
+  const data = m.data();
+  const d = document.getElementById(m.dateId).value;
+  const btn = document.getElementById(m.btnId);
+  if (d && d in data) {
+    document.getElementById(m.valId).value = data[d];
+    btn.innerHTML = `✏️ Update ${m.saveLabel} <span class="edit-badge">EDIT</span>`;
   } else {
-    const d = document.getElementById('sleepDate').value;
-    const btn = document.getElementById('sleepSaveBtn');
-    if (d && d in sleep) {
-      document.getElementById('sleepHours').value = sleep[d];
-      btn.innerHTML = '✏️ Update Sleep <span class="edit-badge">EDIT</span>';
-    } else {
-      document.getElementById('sleepHours').value = '';
-      btn.innerHTML = '💾 Save Sleep';
-    }
+    document.getElementById(m.valId).value = '';
+    btn.innerHTML = `💾 Save ${m.saveLabel}`;
   }
+}
+function prefillEnergy() {
+  const d = document.getElementById('calsDate').value;
+  document.getElementById('calsCount').value = (d && d in calories) ? calories[d] : '';
+  document.getElementById('intakeCount').value = (d && d in intake) ? intake[d] : '';
+  const btn = document.getElementById('calsSaveBtn');
+  btn.innerHTML = (d && (d in calories || d in intake))
+    ? '✏️ Update energy <span class="edit-badge">EDIT</span>'
+    : '💾 Save energy day';
 }
 
-// ==== Save ====
-function saveSteps() {
-  const date = document.getElementById('stepsDate').value;
-  const count = parseInt(document.getElementById('stepsCount').value, 10);
-  const g = parseFloat(document.getElementById('stepsGoal').value);
-  if (!date) return showToast('Pick a date first', 'warn');
-  if (isNaN(count) || count < 0) return showToast('Enter a valid step count', 'warn');
-  if (date in steps && steps[date] !== count) {
-    if (!confirm(`Overwrite ${date}?\nCurrent: ${steps[date].toLocaleString()} → New: ${count.toLocaleString()}`)) return;
-  }
-  steps[date] = count;
-  if (!isNaN(g) && g > 0) stepsGoal = g;
+// ---- Save ----
+function saveMetric(which) {
+  const m = META[which];
+  const date = document.getElementById(m.dateId).value;
+  const val = m.parse(document.getElementById(m.valId).value);
+  const g = parseFloat(document.getElementById(m.goalId).value);
+  if (!date) return showToast('Pick a date', 'warn');
+  if (m.validate ? !m.validate(val) : (isNaN(val) || val < 0)) return showToast('Invalid value', 'warn');
+  const data = m.data();
+  if (date in data && data[date] !== val && !confirm(`Overwrite ${date}?`)) return;
+  data[date] = val;
+  if (!isNaN(g) && g > 0) m.setGoal(g);
   persistAll();
-  document.getElementById('stepsCount').value = '';
-  prefill('steps');
+  document.getElementById(m.valId).value = '';
+  prefillMetric(which);
   renderAll();
-  showToast(`Saved ${count.toLocaleString()} steps for ${date}`);
+  showToast(`Saved ${m.fmt(val)} for ${date}`);
 }
-function saveHP() {
-  const date = document.getElementById('hpDate').value;
-  const count = parseInt(document.getElementById('hpCount').value, 10);
-  const g = parseFloat(document.getElementById('hpGoal').value);
-  if (!date) return showToast('Pick a date first', 'warn');
-  if (isNaN(count) || count < 0) return showToast('Enter a valid heart points value', 'warn');
-  if (date in heartPoints && heartPoints[date] !== count) {
-    if (!confirm(`Overwrite ${date}?\nCurrent: ${heartPoints[date]} → New: ${count}`)) return;
+function saveEnergy() {
+  const date = document.getElementById('calsDate').value;
+  const actRaw = document.getElementById('calsCount').value;
+  const inRaw = document.getElementById('intakeCount').value;
+  if (!date) return showToast('Pick a date', 'warn');
+  if (actRaw === '' && inRaw === '') return showToast('Enter active and/or intake', 'warn');
+  if (actRaw !== '') {
+    const a = parseInt(actRaw, 10);
+    if (isNaN(a) || a < 0) return showToast('Invalid active kcal', 'warn');
+    calories[date] = a;
   }
-  heartPoints[date] = count;
-  if (!isNaN(g) && g > 0) hpGoal = g;
-  persistAll();
-  document.getElementById('hpCount').value = '';
-  prefill('hp');
-  renderAll();
-  showToast(`Saved ${count} heart points for ${date}`);
-}
-function saveSleep() {
-  const date = document.getElementById('sleepDate').value;
-  const hours = parseFloat(document.getElementById('sleepHours').value);
-  const t = parseFloat(document.getElementById('sleepTarget').value);
-  if (!date) return showToast('Pick a date first', 'warn');
-  if (isNaN(hours) || hours < 0 || hours > 24) return showToast('Enter valid hours (0–24)', 'warn');
-  if (date in sleep && sleep[date] !== hours) {
-    if (!confirm(`Overwrite ${date}?\nCurrent: ${sleep[date]}h → New: ${hours}h`)) return;
+  if (inRaw !== '') {
+    const i = parseInt(inRaw, 10);
+    if (isNaN(i) || i < 0) return showToast('Invalid intake', 'warn');
+    intake[date] = i;
   }
-  sleep[date] = hours;
-  if (!isNaN(t) && t > 0) sleepTarget = t;
+  const cg = parseFloat(document.getElementById('calsGoal').value);
+  const ng = parseFloat(document.getElementById('netGoal').value);
+  if (!isNaN(cg) && cg > 0) calsGoal = cg;
+  if (!isNaN(ng) && ng >= 0) netGoal = ng;
   persistAll();
-  document.getElementById('sleepHours').value = '';
-  prefill('sleep');
+  document.getElementById('calsCount').value = '';
+  document.getElementById('intakeCount').value = '';
+  prefillEnergy();
   renderAll();
-  showToast(`Saved ${hours}h sleep for ${date}`);
+  const net = netBurned(date);
+  showToast(net != null
+    ? `Exp ${expenditure(calories[date] || 0)} − intake ${intake[date]} = net ${net >= 0 ? '+' : ''}${net}`
+    : 'Energy saved (add both active + intake for net)');
 }
 
-// ==== Delete / Edit ====
-function deleteEntry(type, date) {
-  if (!confirm(`Delete ${type} for ${date}?`)) return;
-  if (type === 'steps') delete steps[date];
-  else if (type === 'hp') delete heartPoints[date];
-  else delete sleep[date];
-  persistAll();
-  renderAll();
-  showToast(`Deleted ${date}`);
+// ---- Edit / delete ----
+function deleteMetric(which, date) {
+  if (!confirm(`Delete ${META[which].label} for ${date}?`)) return;
+  delete META[which].data()[date];
+  persistAll(); renderAll();
 }
-function editEntry(type, date) {
-  if (type === 'steps') {
-    document.getElementById('stepsDate').value = date;
-    document.getElementById('stepsCount').value = steps[date];
-    prefill('steps');
-    document.getElementById('stepsCount').focus();
-  } else if (type === 'hp') {
-    document.getElementById('hpDate').value = date;
-    document.getElementById('hpCount').value = heartPoints[date];
-    prefill('hp');
-    document.getElementById('hpCount').focus();
-  } else {
-    document.getElementById('sleepDate').value = date;
-    document.getElementById('sleepHours').value = sleep[date];
-    prefill('sleep');
-    document.getElementById('sleepHours').focus();
-  }
+function editMetric(which, date) {
+  const m = META[which];
+  document.getElementById(m.dateId).value = date;
+  document.getElementById(m.valId).value = m.data()[date];
+  prefillMetric(which);
+  document.getElementById(m.valId).focus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+function deleteEnergy(date) {
+  if (!confirm(`Delete energy for ${date}?`)) return;
+  delete calories[date]; delete intake[date];
+  persistAll(); renderAll();
+}
+function editEnergy(date) {
+  document.getElementById('calsDate').value = date;
+  prefillEnergy();
+  document.getElementById('calsCount').focus();
+}
 
-// ==== Tables ====
-function renderStepsTable() {
-  const dates = filterDates(steps, document.getElementById('stepsFilter').value);
-  const tbody = document.getElementById('stepsTableBody');
+// ---- Tables ----
+function renderMetricTable(which) {
+  const m = META[which];
+  const data = m.data();
+  const goal = m.getGoal();
+  const dates = filterDates(data, document.getElementById(m.filterId).value);
+  const tbody = document.getElementById(m.bodyId);
   if (!dates.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">No steps logged yet</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">No data yet</td></tr>`;
     return;
   }
   tbody.innerHTML = dates.map(d => {
-    const v = steps[d];
-    const met = v >= stepsGoal;
-    const diff = v - stepsGoal;
+    const v = data[d];
+    const met = v >= goal;
+    const diff = m.isSleep ? (v - goal).toFixed(2) : (v - goal);
+    const diffStr = m.isSleep ? `${diff >= 0 ? '+' : ''}${diff}h` : `${diff >= 0 ? '+' : ''}${Number(diff).toLocaleString()}`;
     return `<tr>
       <td>${d}</td>
-      <td class="num" style="color:var(--accent4)">${v.toLocaleString()}</td>
-      <td>${met ? '✅' : '❌'} ${diff >= 0 ? '+' : ''}${diff.toLocaleString()}</td>
+      <td class="num" style="color:${m.color}">${m.fmt(v)}</td>
+      <td>${met ? '✅' : '❌'} ${diffStr}</td>
       <td class="actions">
-        <button class="ghost small" onclick="editEntry('steps','${d}')" title="Edit">✏️</button>
-        <button class="ghost small" onclick="deleteEntry('steps','${d}')" title="Delete">🗑️</button>
-      </td>
-    </tr>`;
+        <button class="ghost small" onclick="editMetric('${which}','${d}')">✏️</button>
+        <button class="ghost small" onclick="deleteMetric('${which}','${d}')">🗑️</button>
+      </td></tr>`;
   }).join('');
 }
-function renderHPTable() {
-  const dates = filterDates(heartPoints, document.getElementById('hpFilter').value);
-  const tbody = document.getElementById('hpTableBody');
+function renderEnergyTable() {
+  const q = (document.getElementById('calsFilter').value || '').toLowerCase();
+  const dates = [...new Set([...Object.keys(calories), ...Object.keys(intake)])].sort().reverse()
+    .filter(d => !q || d.includes(q) || String(calories[d] || '').includes(q) || String(intake[d] || '').includes(q));
+  const tbody = document.getElementById('calsTableBody');
   if (!dates.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">No heart points logged yet</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Log active + intake to see net burned</td></tr>`;
     return;
   }
   tbody.innerHTML = dates.map(d => {
-    const v = heartPoints[d];
-    const met = v >= hpGoal;
-    const diff = v - hpGoal;
+    const act = d in calories ? calories[d] : null;
+    const inn = d in intake ? intake[d] : null;
+    const exp = act != null ? expenditure(act) : null;
+    const net = netBurned(d);
+    const netCls = net == null ? '' : (net >= 0 ? 'net-pos' : 'net-neg');
+    const netStr = net == null ? '—' : `${net >= 0 ? '+' : ''}${net.toLocaleString()}`;
     return `<tr>
       <td>${d}</td>
-      <td class="num" style="color:var(--heart)">${v}</td>
-      <td>${met ? '✅' : '❌'} ${diff >= 0 ? '+' : ''}${diff}</td>
+      <td class="num" style="color:var(--cals)">${act != null ? act.toLocaleString() : '—'}</td>
+      <td class="num">${rmr.toLocaleString()}</td>
+      <td class="num" style="color:var(--accent)">${exp != null ? exp.toLocaleString() : '—'}</td>
+      <td class="num" style="color:var(--intake)">${inn != null ? inn.toLocaleString() : '—'}</td>
+      <td class="num ${netCls}">${netStr}</td>
       <td class="actions">
-        <button class="ghost small" onclick="editEntry('hp','${d}')" title="Edit">✏️</button>
-        <button class="ghost small" onclick="deleteEntry('hp','${d}')" title="Delete">🗑️</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-function renderSleepTable() {
-  const dates = filterDates(sleep, document.getElementById('sleepFilter').value);
-  const tbody = document.getElementById('sleepTableBody');
-  if (!dates.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">No sleep logged yet</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = dates.map(d => {
-    const v = sleep[d];
-    const met = v >= sleepTarget;
-    const diff = (v - sleepTarget).toFixed(2);
-    return `<tr>
-      <td>${d}</td>
-      <td class="num" style="color:var(--sleep)">${v}h</td>
-      <td>${met ? '✅' : '❌'} ${diff >= 0 ? '+' : ''}${diff}h</td>
-      <td class="actions">
-        <button class="ghost small" onclick="editEntry('sleep','${d}')" title="Edit">✏️</button>
-        <button class="ghost small" onclick="deleteEntry('sleep','${d}')" title="Delete">🗑️</button>
-      </td>
-    </tr>`;
+        <button class="ghost small" onclick="editEnergy('${d}')">✏️</button>
+        <button class="ghost small" onclick="deleteEnergy('${d}')">🗑️</button>
+      </td></tr>`;
   }).join('');
 }
 
-// ==== Stats ====
+// ---- Stats ----
 function renderStats() {
   const sDates = Object.keys(steps);
-  const sTotal = sDates.reduce((a, d) => a + steps[d], 0);
-  const sAvg = sDates.length ? Math.round(sTotal / sDates.length) : 0;
-  const sStreak = calcStreak(steps, stepsGoal);
+  const sAvg = sDates.length ? Math.round(sDates.reduce((a, d) => a + steps[d], 0) / sDates.length) : 0;
+  const sSt = calcStreak(steps, stepsGoal);
   const sMet = sDates.filter(d => steps[d] >= stepsGoal).length;
   const sPct = sDates.length ? Math.round(sMet / sDates.length * 100) : 0;
   const s7 = Math.round(rollingAvg(steps, 7));
-  const s30 = Math.round(rollingAvg(steps, 30));
+
+  const cDates = Object.keys(calories);
+  const cAvg = cDates.length ? Math.round(cDates.reduce((a, d) => a + calories[d], 0) / cDates.length) : 0;
+  const nets = Object.keys(calories).filter(d => d in intake).map(d => netBurned(d));
+  const netAvg = nets.length ? Math.round(nets.reduce((a, b) => a + b, 0) / nets.length) : null;
+  const cut7 = (() => { const c = new Date(); c.setDate(c.getDate() - 6); return c.toLocaleDateString('en-CA'); })();
+  const net7vals = Object.keys(calories).filter(d => d >= cut7 && d in intake).map(d => netBurned(d));
+  const net7 = net7vals.length ? Math.round(net7vals.reduce((a, b) => a + b, 0) / net7vals.length) : null;
 
   const hDates = Object.keys(heartPoints);
-  const hTotal = hDates.reduce((a, d) => a + heartPoints[d], 0);
-  const hAvg = hDates.length ? Math.round(hTotal / hDates.length) : 0;
-  const hStreak = calcStreak(heartPoints, hpGoal);
-  const hMet = hDates.filter(d => heartPoints[d] >= hpGoal).length;
-  const hPct = hDates.length ? Math.round(hMet / hDates.length * 100) : 0;
-  const h7 = Math.round(rollingAvg(heartPoints, 7));
-  const h30 = Math.round(rollingAvg(heartPoints, 30));
+  const hAvg = hDates.length ? Math.round(hDates.reduce((a, d) => a + heartPoints[d], 0) / hDates.length) : 0;
+  const hSt = calcStreak(heartPoints, hpGoal);
 
   const slDates = Object.keys(sleep);
   const slAvg = slDates.length ? +(slDates.reduce((a, d) => a + sleep[d], 0) / slDates.length).toFixed(1) : 0;
-  const slStreak = calcStreak(sleep, sleepTarget);
-  const slMet = slDates.filter(d => sleep[d] >= sleepTarget).length;
-  const slPct = slDates.length ? Math.round(slMet / slDates.length * 100) : 0;
-  const sl7 = +rollingAvg(sleep, 7).toFixed(1);
-  const sl30 = +rollingAvg(sleep, 30).toFixed(1);
+  const slSt = calcStreak(sleep, sleepTarget);
 
   document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="val" style="color:var(--accent)">${rmr.toLocaleString()}</div><div class="lab">BMR kcal</div></div>
     <div class="stat-card"><div class="val">${sDates.length}</div><div class="lab">🚶 Days</div></div>
     <div class="stat-card"><div class="val">${sAvg.toLocaleString()}</div><div class="lab">🚶 Avg</div></div>
-    <div class="stat-card"><div class="val">${sStreak.current}</div><div class="lab">🚶 Streak</div></div>
-    <div class="stat-card"><div class="val">${sPct}%</div><div class="lab">🚶 Goal Hit</div></div>
-    <div class="stat-card"><div class="val">${s7.toLocaleString()}</div><div class="lab">🚶 7d Avg</div></div>
-    <div class="stat-card"><div class="val">${s30.toLocaleString()}</div><div class="lab">🚶 30d Avg</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--heart)">${hDates.length}</div><div class="lab">❤️ Days</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--heart)">${hAvg}</div><div class="lab">❤️ Avg</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--heart)">${hStreak.current}</div><div class="lab">❤️ Streak</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--heart)">${hPct}%</div><div class="lab">❤️ Goal Hit</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--heart)">${h7}</div><div class="lab">❤️ 7d Avg</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--heart)">${h30}</div><div class="lab">❤️ 30d Avg</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--sleep)">${slDates.length}</div><div class="lab">🌙 Nights</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--sleep)">${slAvg}h</div><div class="lab">🌙 Avg</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--sleep)">${slStreak.current}</div><div class="lab">🌙 Streak</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--sleep)">${slPct}%</div><div class="lab">🌙 Target Hit</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--sleep)">${sl7}h</div><div class="lab">🌙 7d Avg</div></div>
-    <div class="stat-card"><div class="val" style="color:var(--sleep)">${sl30}h</div><div class="lab">🌙 30d Avg</div></div>
+    <div class="stat-card"><div class="val">${sSt.current}</div><div class="lab">🚶 Streak</div></div>
+    <div class="stat-card"><div class="val">${sPct}%</div><div class="lab">🚶 Goal</div></div>
+    <div class="stat-card"><div class="val">${s7.toLocaleString()}</div><div class="lab">🚶 7d</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--cals)">${cAvg.toLocaleString()}</div><div class="lab">🔥 Act avg</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--accent)">${cAvg ? expenditure(cAvg).toLocaleString() : '—'}</div><div class="lab">🔥 Exp avg</div></div>
+    <div class="stat-card"><div class="val" style="color:${netAvg == null ? 'var(--muted)' : netAvg >= 0 ? 'var(--accent)' : 'var(--danger)'}">${netAvg == null ? '—' : (netAvg >= 0 ? '+' : '') + netAvg}</div><div class="lab">⚖️ Net avg</div></div>
+    <div class="stat-card"><div class="val" style="color:${net7 == null ? 'var(--muted)' : net7 >= 0 ? 'var(--accent)' : 'var(--danger)'}">${net7 == null ? '—' : (net7 >= 0 ? '+' : '') + net7}</div><div class="lab">⚖️ Net 7d</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--heart)">${hAvg}</div><div class="lab">❤️ HP avg</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--heart)">${hSt.current}</div><div class="lab">❤️ Streak</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--sleep)">${slAvg}h</div><div class="lab">🌙 Sleep avg</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--sleep)">${slSt.current}</div><div class="lab">🌙 Streak</div></div>
   `;
 }
 
-// ==== Charts ====
-let stepsChartInstance = null, hpChartInstance = null, sleepChartInstance = null;
-
-const chartBaseOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: { mode: 'index', intersect: false },
-  scales: {
-    x: {
-      ticks: { color: '#9999aa', maxRotation: 45, autoSkip: true, maxTicksLimit: 12 },
-      grid: { color: '#2e2e44' }
-    },
-    y: {
-      beginAtZero: true,
-      grace: '8%',
-      ticks: { color: '#9999aa' },
-      grid: { color: '#2e2e44' }
-    }
+// ---- Charts ----
+function renderMetricChart(which) {
+  const m = META[which];
+  const data = m.data();
+  const goal = m.getGoal();
+  const dates = getRangeDates(data, document.getElementById(m.rangeId).value);
+  if (charts[which]) { charts[which].destroy(); charts[which] = null; }
+  if (!dates.length) return;
+  const showRoll = document.getElementById(m.rollId).checked;
+  const showGoal = document.getElementById(m.goalCbId).checked;
+  const roll = rollingAvgSeries(data, dates, 7);
+  const datasets = [];
+  if (m.isSleep) {
+    datasets.push({
+      label: m.label, data: dates.map(d => data[d]),
+      borderColor: m.color, backgroundColor: 'rgba(129,140,248,0.15)',
+      pointBackgroundColor: dates.map(d => data[d] >= goal ? '#00d4aa' : m.color),
+      tension: 0.3, pointRadius: 3, fill: true
+    });
+  } else {
+    datasets.push({
+      label: m.label, data: dates.map(d => data[d]),
+      backgroundColor: dates.map(d => data[d] >= goal ? 'rgba(0,212,170,0.65)' : m.barMiss),
+      borderColor: dates.map(d => data[d] >= goal ? '#00d4aa' : m.color),
+      borderWidth: 1, borderRadius: 4, maxBarThickness: 28
+    });
   }
-};
-
+  if (showRoll) {
+    datasets.push({
+      label: '7d avg', data: m.isSleep ? roll.map(v => v == null ? null : +v.toFixed(2)) : roll,
+      type: 'line', borderColor: '#00d4aa', borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false, spanGaps: true
+    });
+  }
+  if (showGoal) {
+    datasets.push({
+      label: 'Goal', data: dates.map(() => goal), type: 'line',
+      borderColor: 'rgba(255,183,77,0.75)', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, fill: false
+    });
+  }
+  charts[which] = new Chart(document.getElementById(m.canvasId), {
+    type: m.isSleep ? 'line' : 'bar',
+    data: { labels: dates, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#9999aa', boxWidth: 12 } },
+        tooltip: { backgroundColor: '#1e1e2f', titleColor: '#e6e6f2', bodyColor: '#e6e6f2', borderColor: '#2e2e44', borderWidth: 1 }
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 12, maxRotation: 45 }, grid: { color: '#2e2e44' } },
+        y: {
+          beginAtZero: true, grace: '8%',
+          ticks: { callback: v => (!m.isSleep && v >= 1000) ? (v / 1000) + 'k' : v },
+          grid: { color: '#2e2e44' }
+        }
+      }
+    }
+  });
+}
+function renderEnergyChart() {
+  const allDates = [...new Set([...Object.keys(calories), ...Object.keys(intake)])].sort();
+  const range = document.getElementById('calsRange').value;
+  let dates = allDates;
+  if (range !== 'all' && allDates.length) {
+    const c = new Date(); c.setDate(c.getDate() - parseInt(range, 10));
+    dates = allDates.filter(d => d >= c.toLocaleDateString('en-CA'));
+  }
+  if (charts.cals) { charts.cals.destroy(); charts.cals = null; }
+  if (!dates.length) return;
+  const ds = [];
+  if (document.getElementById('calsShowActive').checked) {
+    ds.push({
+      label: 'Active', type: 'bar',
+      data: dates.map(d => d in calories ? calories[d] : null),
+      backgroundColor: 'rgba(251,146,60,0.55)', borderColor: '#fb923c', borderWidth: 1, borderRadius: 4, maxBarThickness: 22
+    });
+  }
+  if (document.getElementById('calsShowExp').checked) {
+    ds.push({
+      label: 'Expenditure', type: 'line',
+      data: dates.map(d => d in calories ? expenditure(calories[d]) : null),
+      borderColor: '#00d4aa', borderWidth: 2, pointRadius: 0, tension: 0.25, spanGaps: true
+    });
+  }
+  if (document.getElementById('calsShowIntake').checked) {
+    ds.push({
+      label: 'Intake', type: 'line',
+      data: dates.map(d => d in intake ? intake[d] : null),
+      borderColor: '#a3e635', borderWidth: 2, pointRadius: 2, tension: 0.25, spanGaps: true
+    });
+  }
+  if (document.getElementById('calsShowNet').checked) {
+    ds.push({
+      label: 'Net burned', type: 'line',
+      data: dates.map(d => netBurned(d)),
+      borderColor: '#38bdf8', borderWidth: 2, pointRadius: 2, tension: 0.25, spanGaps: true
+    });
+  }
+  charts.cals = new Chart(document.getElementById('calsChart'), {
+    type: 'bar',
+    data: { labels: dates, datasets: ds },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#9999aa', boxWidth: 12 } },
+        tooltip: {
+          backgroundColor: '#1e1e2f', titleColor: '#e6e6f2', bodyColor: '#e6e6f2',
+          callbacks: {
+            label: ctx => {
+              if (ctx.raw == null) return ctx.dataset.label + ': —';
+              const n = Number(ctx.raw);
+              if (ctx.dataset.label === 'Net burned') return `Net: ${n >= 0 ? '+' : ''}${n} (${n >= 0 ? 'deficit' : 'surplus'})`;
+              return `${ctx.dataset.label}: ${n.toLocaleString()} kcal`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 12, maxRotation: 45 }, grid: { color: '#2e2e44' } },
+        y: { grace: '8%', grid: { color: '#2e2e44' }, title: { display: true, text: 'kcal', color: '#9999aa' } }
+      }
+    }
+  });
+}
 function renderCharts() {
-  // —— Steps ——
-  const sRange = document.getElementById('stepsRange').value;
-  const sDates = getRangeDates(steps, sRange);
-  const sRoll7 = rollingAvgSeries(steps, sDates, 7);
-  const showSRoll = document.getElementById('stepsShowRoll').checked;
-  const showSGoal = document.getElementById('stepsShowGoal').checked;
-  if (stepsChartInstance) { stepsChartInstance.destroy(); stepsChartInstance = null; }
-  if (sDates.length) {
-    const sDatasets = [{
-      label: 'Steps',
-      data: sDates.map(d => steps[d]),
-      backgroundColor: sDates.map(d => steps[d] >= stepsGoal ? 'rgba(0,212,170,0.65)' : 'rgba(255,183,77,0.55)'),
-      borderColor: sDates.map(d => steps[d] >= stepsGoal ? '#00d4aa' : '#ffb74d'),
-      borderWidth: 1,
-      borderRadius: 4,
-      maxBarThickness: 28
-    }];
-    if (showSRoll) {
-      sDatasets.push({
-        label: '7d avg',
-        data: sRoll7,
-        type: 'line',
-        borderColor: '#00d4aa',
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.3,
-        fill: false,
-        spanGaps: true
-      });
-    }
-    if (showSGoal) {
-      sDatasets.push({
-        label: `Goal (${stepsGoal})`,
-        data: sDates.map(() => stepsGoal),
-        type: 'line',
-        borderColor: 'rgba(255,183,77,0.7)',
-        borderWidth: 2,
-        borderDash: [6, 4],
-        pointRadius: 0,
-        fill: false
-      });
-    }
-    stepsChartInstance = new Chart(document.getElementById('stepsChart'), {
-      type: 'bar',
-      data: { labels: sDates, datasets: sDatasets },
-      options: {
-        ...chartBaseOptions,
-        plugins: {
-          legend: { display: true, labels: { color: '#9999aa', boxWidth: 12 } },
-          tooltip: {
-            backgroundColor: '#1e1e2f',
-            titleColor: '#e6e6f2',
-            bodyColor: '#e6e6f2',
-            borderColor: '#2e2e44',
-            borderWidth: 1,
-            callbacks: {
-              label: (ctx) => {
-                const lab = ctx.dataset.label || '';
-                if (lab.startsWith('Goal')) return `Goal: ${Number(ctx.raw).toLocaleString()}`;
-                if (lab === '7d avg') return ctx.raw == null ? null : `7d avg: ${Math.round(ctx.raw).toLocaleString()}`;
-                const v = ctx.raw;
-                const d = v - stepsGoal;
-                return `${Number(v).toLocaleString()} steps (${d >= 0 ? '+' : ''}${d.toLocaleString()})`;
-              }
-            }
-          }
-        },
-        scales: {
-          ...chartBaseOptions.scales,
-          y: {
-            ...chartBaseOptions.scales.y,
-            ticks: {
-              color: '#9999aa',
-              callback: (v) => v >= 1000 ? (v / 1000) + 'k' : v
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // —— Heart Points ——
-  const hRange = document.getElementById('hpRange').value;
-  const hDates = getRangeDates(heartPoints, hRange);
-  const hRoll7 = rollingAvgSeries(heartPoints, hDates, 7);
-  const showHRoll = document.getElementById('hpShowRoll').checked;
-  const showHGoal = document.getElementById('hpShowGoal').checked;
-  if (hpChartInstance) { hpChartInstance.destroy(); hpChartInstance = null; }
-  if (hDates.length) {
-    const hDatasets = [{
-      label: 'Heart Points',
-      data: hDates.map(d => heartPoints[d]),
-      backgroundColor: hDates.map(d => heartPoints[d] >= hpGoal ? 'rgba(0,212,170,0.65)' : 'rgba(255,107,157,0.55)'),
-      borderColor: hDates.map(d => heartPoints[d] >= hpGoal ? '#00d4aa' : '#ff6b9d'),
-      borderWidth: 1,
-      borderRadius: 4,
-      maxBarThickness: 28
-    }];
-    if (showHRoll) {
-      hDatasets.push({
-        label: '7d avg',
-        data: hRoll7,
-        type: 'line',
-        borderColor: '#00d4aa',
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.3,
-        fill: false,
-        spanGaps: true
-      });
-    }
-    if (showHGoal) {
-      hDatasets.push({
-        label: `Goal (${hpGoal})`,
-        data: hDates.map(() => hpGoal),
-        type: 'line',
-        borderColor: 'rgba(255,183,77,0.7)',
-        borderWidth: 2,
-        borderDash: [6, 4],
-        pointRadius: 0,
-        fill: false
-      });
-    }
-    hpChartInstance = new Chart(document.getElementById('hpChart'), {
-      type: 'bar',
-      data: { labels: hDates, datasets: hDatasets },
-      options: {
-        ...chartBaseOptions,
-        plugins: {
-          legend: { display: true, labels: { color: '#9999aa', boxWidth: 12 } },
-          tooltip: {
-            backgroundColor: '#1e1e2f',
-            titleColor: '#e6e6f2',
-            bodyColor: '#e6e6f2',
-            borderColor: '#2e2e44',
-            borderWidth: 1,
-            callbacks: {
-              label: (ctx) => {
-                const lab = ctx.dataset.label || '';
-                if (lab.startsWith('Goal')) return `Goal: ${ctx.raw}`;
-                if (lab === '7d avg') return ctx.raw == null ? null : `7d avg: ${Math.round(ctx.raw)}`;
-                const v = ctx.raw;
-                const d = v - hpGoal;
-                return `${v} points (${d >= 0 ? '+' : ''}${d})`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // —— Sleep ——
-  const slRange = document.getElementById('sleepRange').value;
-  const slDates = getRangeDates(sleep, slRange);
-  const slRoll7 = rollingAvgSeries(sleep, slDates, 7);
-  const showSlRoll = document.getElementById('sleepShowRoll').checked;
-  const showSlGoal = document.getElementById('sleepShowGoal').checked;
-  if (sleepChartInstance) { sleepChartInstance.destroy(); sleepChartInstance = null; }
-  if (slDates.length) {
-    const slDatasets = [{
-      label: 'Sleep (hrs)',
-      data: slDates.map(d => sleep[d]),
-      borderColor: '#818cf8',
-      backgroundColor: 'rgba(129,140,248,0.15)',
-      pointBackgroundColor: slDates.map(d => sleep[d] >= sleepTarget ? '#00d4aa' : '#818cf8'),
-      tension: 0.3,
-      pointRadius: 3,
-      fill: true
-    }];
-    if (showSlRoll) {
-      slDatasets.push({
-        label: '7d avg',
-        data: slRoll7.map(v => v == null ? null : +v.toFixed(2)),
-        borderColor: '#00d4aa',
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.3,
-        fill: false,
-        spanGaps: true
-      });
-    }
-    if (showSlGoal) {
-      slDatasets.push({
-        label: `Target (${sleepTarget}h)`,
-        data: slDates.map(() => sleepTarget),
-        borderColor: 'rgba(255,183,77,0.85)',
-        borderWidth: 2,
-        borderDash: [6, 4],
-        pointRadius: 0,
-        fill: false
-      });
-    }
-    sleepChartInstance = new Chart(document.getElementById('sleepChart'), {
-      type: 'line',
-      data: { labels: slDates, datasets: slDatasets },
-      options: {
-        ...chartBaseOptions,
-        plugins: {
-          legend: { display: true, labels: { color: '#9999aa', boxWidth: 12 } },
-          tooltip: {
-            backgroundColor: '#1e1e2f',
-            titleColor: '#e6e6f2',
-            bodyColor: '#e6e6f2',
-            borderColor: '#2e2e44',
-            borderWidth: 1,
-            callbacks: {
-              label: (ctx) => {
-                const lab = ctx.dataset.label || '';
-                if (lab.startsWith('Target')) return `Target: ${ctx.raw}h`;
-                if (lab === '7d avg') return ctx.raw == null ? null : `7d avg: ${ctx.raw}h`;
-                const v = ctx.raw;
-                const d = (v - sleepTarget).toFixed(2);
-                return `${v}h (${d >= 0 ? '+' : ''}${d}h)`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
+  renderMetricChart('steps');
+  renderEnergyChart();
+  renderMetricChart('hp');
+  renderMetricChart('sleep');
 }
 
 function renderAll() {
+  document.getElementById('rmrInput').value = rmr;
   document.getElementById('stepsGoal').value = stepsGoal;
+  document.getElementById('calsGoal').value = calsGoal;
+  document.getElementById('netGoal').value = netGoal;
   document.getElementById('hpGoal').value = hpGoal;
   document.getElementById('sleepTarget').value = sleepTarget;
+  document.getElementById('bmrSex').value = bmrProfile.sex || 'male';
+  document.getElementById('bmrAge').value = bmrProfile.age || '';
+  document.getElementById('bmrWeight').value = bmrProfile.weight || '';
+  document.getElementById('bmrHeight').value = bmrProfile.height || '';
+  document.getElementById('bmrBf').value = bmrProfile.bf || '';
+  renderMetricTable('steps');
+  renderEnergyTable();
+  renderMetricTable('hp');
+  renderMetricTable('sleep');
   renderStats();
-  renderStepsTable();
-  renderHPTable();
-  renderSleepTable();
   renderCharts();
 }
 
-// ==== Backup / Import / CSV ====
+// ---- Backup / CSV ----
 function exportBackup() {
-  if (!Object.keys(steps).length && !Object.keys(heartPoints).length && !Object.keys(sleep).length) {
-    return showToast('No data to back up yet', 'warn');
-  }
   const backup = {
     app: 'ventus3-daily-activity',
-    version: 2,
+    version: 5,
     exportedAt: new Date().toISOString(),
-    steps, heartPoints, sleep,
-    stepsGoal, hpGoal, sleepTarget
+    steps, calories, intake, heartPoints, sleep,
+    stepsGoal, calsGoal, netGoal, hpGoal, sleepTarget, rmr, bmrProfile
   };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `activity_backup_v2_${todayStr()}.json`;
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
+  a.download = `activity_backup_v5_${todayStr()}.json`;
   a.click();
   showToast('Backup downloaded');
 }
-
 function exportCSV() {
-  const allDates = new Set([
-    ...Object.keys(steps),
-    ...Object.keys(heartPoints),
-    ...Object.keys(sleep)
-  ]);
-  if (!allDates.size) return showToast('No data to export', 'warn');
-  const sorted = [...allDates].sort();
-  const lines = ['date,steps,heart_points,sleep_hours'];
-  sorted.forEach(d => {
-    const s = d in steps ? steps[d] : '';
-    const h = d in heartPoints ? heartPoints[d] : '';
-    const sl = d in sleep ? sleep[d] : '';
-    lines.push(`${d},${s},${h},${sl}`);
+  const dates = [...new Set([
+    ...Object.keys(steps), ...Object.keys(calories), ...Object.keys(intake),
+    ...Object.keys(heartPoints), ...Object.keys(sleep)
+  ])].sort();
+  if (!dates.length) return showToast('No data', 'warn');
+  const lines = ['date,steps,active_kcal,bmr,expenditure,intake_kcal,net_burned,heart_points,sleep_hours'];
+  dates.forEach(d => {
+    const act = d in calories ? calories[d] : '';
+    const exp = act === '' ? '' : expenditure(act);
+    const inn = d in intake ? intake[d] : '';
+    const net = netBurned(d);
+    lines.push([
+      d, d in steps ? steps[d] : '', act, rmr, exp, inn, net == null ? '' : net,
+      d in heartPoints ? heartPoints[d] : '', d in sleep ? sleep[d] : ''
+    ].join(','));
   });
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
   a.download = `activity_export_${todayStr()}.csv`;
   a.click();
   showToast('CSV exported');
 }
-
 async function importBackup(event) {
   const file = event.target.files[0];
   event.target.value = '';
   if (!file) return;
   try {
-    const parsed = JSON.parse(await file.text());
-    const incomingSteps = (parsed.steps && typeof parsed.steps === 'object') ? parsed.steps : {};
-    const incomingHP = (parsed.heartPoints && typeof parsed.heartPoints === 'object') ? parsed.heartPoints : {};
-    const incomingSleep = (parsed.sleep && typeof parsed.sleep === 'object') ? parsed.sleep : {};
-
-    if (!Object.keys(incomingSteps).length && !Object.keys(incomingHP).length && !Object.keys(incomingSleep).length) {
-      return showToast("That file doesn't look like a backup from this app", 'err');
-    }
-
-    const merge = confirm(
-      `Backup contains:\n• ${Object.keys(incomingSteps).length} step day(s)\n• ${Object.keys(incomingHP).length} heart-point day(s)\n• ${Object.keys(incomingSleep).length} sleep night(s)\n\n` +
-      `OK = MERGE (keep existing + add missing)\nCancel = then choose Replace`
-    );
-
+    const p = JSON.parse(await file.text());
+    const merge = confirm('OK = MERGE (keep yours, add missing)\nCancel = then choose Replace');
+    const mergeObj = (dst, src) => { Object.keys(src || {}).forEach(k => { if (!(k in dst)) dst[k] = src[k]; }); };
     if (merge) {
-      let added = { steps: 0, hp: 0, sleep: 0 };
-      Object.keys(incomingSteps).forEach(d => { if (!(d in steps)) { steps[d] = incomingSteps[d]; added.steps++; } });
-      Object.keys(incomingHP).forEach(d => { if (!(d in heartPoints)) { heartPoints[d] = incomingHP[d]; added.hp++; } });
-      Object.keys(incomingSleep).forEach(d => { if (!(d in sleep)) { sleep[d] = incomingSleep[d]; added.sleep++; } });
-      if (typeof parsed.stepsGoal === 'number') stepsGoal = parsed.stepsGoal;
-      if (typeof parsed.hpGoal === 'number') hpGoal = parsed.hpGoal;
-      if (typeof parsed.sleepTarget === 'number') sleepTarget = parsed.sleepTarget;
-      persistAll();
-      showToast(`Merged: +${added.steps} steps, +${added.hp} HP, +${added.sleep} sleep`);
+      mergeObj(steps, p.steps); mergeObj(calories, p.calories); mergeObj(intake, p.intake);
+      mergeObj(heartPoints, p.heartPoints); mergeObj(sleep, p.sleep);
     } else {
-      if (!confirm('Replace ALL current data with this backup? This cannot be undone.')) return;
-      steps = incomingSteps;
-      heartPoints = incomingHP;
-      sleep = incomingSleep;
-      if (typeof parsed.stepsGoal === 'number') stepsGoal = parsed.stepsGoal;
-      if (typeof parsed.hpGoal === 'number') hpGoal = parsed.hpGoal;
-      if (typeof parsed.sleepTarget === 'number') sleepTarget = parsed.sleepTarget;
-      persistAll();
-      showToast('Backup restored (full replace)');
+      if (!confirm('Replace ALL current data with this backup?')) return;
+      steps = p.steps || {}; calories = p.calories || {}; intake = p.intake || {};
+      heartPoints = p.heartPoints || {}; sleep = p.sleep || {};
     }
-    renderAll();
-  } catch (err) {
-    console.error(err);
-    showToast("Couldn't read that file — is it valid JSON?", 'err');
+    if (typeof p.stepsGoal === 'number') stepsGoal = p.stepsGoal;
+    if (typeof p.calsGoal === 'number') calsGoal = p.calsGoal;
+    if (typeof p.netGoal === 'number') netGoal = p.netGoal;
+    if (typeof p.hpGoal === 'number') hpGoal = p.hpGoal;
+    if (typeof p.sleepTarget === 'number') sleepTarget = p.sleepTarget;
+    if (typeof p.rmr === 'number') rmr = p.rmr;
+    if (p.bmrProfile) bmrProfile = { ...bmrProfile, ...p.bmrProfile };
+    persistAll(); renderAll();
+    showToast('Import complete');
+  } catch (e) {
+    console.error(e);
+    showToast('Could not read file', 'err');
   }
 }
-
 function clearAllData() {
-  if (!confirm('⚠️ Delete ALL steps, heart points AND sleep data? This cannot be undone!')) return;
-  steps = {}; heartPoints = {}; sleep = {};
-  localStorage.removeItem(STEPS_KEY);
-  localStorage.removeItem(HP_KEY);
-  localStorage.removeItem(SLEEP_KEY);
+  if (!confirm('Delete ALL logged activity? BMR setting is kept.')) return;
+  steps = {}; calories = {}; intake = {}; heartPoints = {}; sleep = {};
+  ['ventus3_daily_steps', 'ventus3_calories', 'ventus3_intake', 'ventus3_heart_points', 'ventus3_sleep_hours']
+    .forEach(k => localStorage.removeItem(k));
   renderAll();
-  showToast('All data cleared');
+  showToast('Activity data cleared');
 }
 
-// ==== Events ====
+// ---- Events ----
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const active = document.activeElement;
-    if (active && active.id === 'stepsCount') saveSteps();
-    else if (active && active.id === 'hpCount') saveHP();
-    else if (active && active.id === 'sleepHours') saveSleep();
-  }
+  if (e.key !== 'Enter') return;
+  const id = document.activeElement && document.activeElement.id;
+  if (id === 'stepsCount') saveMetric('steps');
+  else if (id === 'calsCount' || id === 'intakeCount') saveEnergy();
+  else if (id === 'hpCount') saveMetric('hp');
+  else if (id === 'sleepHours') saveMetric('sleep');
+  else if (id === 'rmrInput') saveRMR();
 });
-
-['stepsDate', 'hpDate', 'sleepDate'].forEach(id => {
-  document.getElementById(id).addEventListener('change', () => {
-    const which = id.startsWith('steps') ? 'steps' : id.startsWith('hp') ? 'hp' : 'sleep';
-    prefill(which);
+['steps', 'hp', 'sleep'].forEach(which => {
+  const m = META[which];
+  document.getElementById(m.dateId).addEventListener('change', () => prefillMetric(which));
+  document.getElementById(m.goalId).addEventListener('change', () => {
+    m.setGoal(parseFloat(document.getElementById(m.goalId).value) || m.defGoal);
+    persistAll(); renderAll();
   });
 });
-
-document.getElementById('stepsGoal').addEventListener('change', () => {
-  stepsGoal = parseFloat(document.getElementById('stepsGoal').value) || 8000;
+document.getElementById('calsDate').addEventListener('change', prefillEnergy);
+document.getElementById('calsGoal').addEventListener('change', () => {
+  calsGoal = parseFloat(document.getElementById('calsGoal').value) || 500;
   persistAll(); renderAll();
 });
-document.getElementById('hpGoal').addEventListener('change', () => {
-  hpGoal = parseFloat(document.getElementById('hpGoal').value) || 30;
-  persistAll(); renderAll();
-});
-document.getElementById('sleepTarget').addEventListener('change', () => {
-  sleepTarget = parseFloat(document.getElementById('sleepTarget').value) || 7;
+document.getElementById('netGoal').addEventListener('change', () => {
+  netGoal = parseFloat(document.getElementById('netGoal').value) || 0;
   persistAll(); renderAll();
 });
 
-// ==== Init ====
 document.addEventListener('DOMContentLoaded', () => {
   loadAll();
-  document.getElementById('stepsDate').value = todayStr();
-  document.getElementById('hpDate').value = todayStr();
-  document.getElementById('sleepDate').value = todayStr();
-  prefill('steps'); prefill('hp'); prefill('sleep');
+  ['stepsDate', 'calsDate', 'hpDate', 'sleepDate'].forEach(id => {
+    document.getElementById(id).value = todayStr();
+  });
+  prefillMetric('steps'); prefillEnergy(); prefillMetric('hp'); prefillMetric('sleep');
   renderAll();
 });
 </script>
